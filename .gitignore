@@ -1,0 +1,55 @@
+# ============================================================
+# Sortie d'école — .gitignore
+# ============================================================
+
+# ── Environnement & Secrets ──────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Backend Laravel ──────────────────────────────────────────
+backend/vendor/
+backend/node_modules/
+backend/storage/framework/cache/
+backend/storage/framework/sessions/
+backend/storage/framework/views/
+backend/storage/logs/
+backend/bootstrap/cache/
+backend/.phpunit.result.cache
+backend/.php-cs-fixer.cache
+
+# ── Flutter (app_parent & app_ecole) ─────────────────────────
+app_parent/.dart_tool/
+app_parent/.packages
+app_parent/build/
+app_parent/.flutter-plugins
+app_parent/.flutter-plugins-dependencies
+app_parent/pubspec.lock
+
+app_ecole/.dart_tool/
+app_ecole/.packages
+app_ecole/build/
+app_ecole/.flutter-plugins
+app_ecole/.flutter-plugins-dependencies
+app_ecole/pubspec.lock
+
+# ── IDE ──────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Node (outils de linting) ────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Docker ───────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── OS ───────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak

@@ -1,0 +1,1 @@
+// notifications/domain — Domaine notifications

@@ -1,0 +1,81 @@
+name: ci
+on: [pull_request]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.f.outputs.backend }}
+      flutter: ${{ steps.f.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: f
+        with:
+          filters: |
+            contrat:
+              - 'api/**'
+              - 'scripts/**'
+            backend:
+              - 'backend/**'
+              - 'api/**'
+              - 'scripts/**'
+            flutter:
+              - 'app_parent/**'
+              - 'app_ecole/**'
+              - 'api/**'
+              - 'scripts/**'
+
+  contrat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/verify.sh contrat
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: test, POSTGRES_DB: sortie_test }
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.3' }
+      - run: composer install --working-dir=backend --no-interaction
+      - run: ./scripts/verify.sh backend
+
+  flutter:
+    needs: changes
+    if: needs.changes.outputs.flutter == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: ./scripts/verify.sh flutter
+
+  tests-verrouilles:
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'correction-test') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: |
+          git diff --name-only --diff-filter=MD origin/${{ github.base_ref }}...HEAD \
+          backend/tests/Feature app_parent/test/features app_ecole/test/features > modifies.txt || true
+          if [ -s modifies.txt ]; then
+            echo "Tests d'acceptation existants modifiés"; cat modifies.txt; exit 1
+          fi
+
+  ci-ok:
+    needs: [changes, contrat, backend, flutter, tests-verrouilles]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - run: echo "ci-ok"

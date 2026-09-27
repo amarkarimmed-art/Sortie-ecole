@@ -1,0 +1,54 @@
+openapi: "3.1.0"
+info:
+  title: Sortie d'école API
+  version: 0.1.0
+  description: |
+    API de gestion sécurisée des sorties scolaires.
+    Source de vérité du projet (ADR 0001 — Contract-First).
+  contact:
+    name: Équipe Sortie d'école
+
+servers:
+  - url: https://api.sortie-ecole.ma/v1
+    description: Production (VPS Maroc)
+  - url: http://localhost:8000/api/v1
+    description: Développement local
+
+# ─── Sécurité ───────────────────────────────────────────────────────────────
+security:
+  - sanctum: []
+
+components:
+  securitySchemes:
+    sanctum:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  # ─── Schemas réutilisables (à compléter feature par feature) ──────────────
+  schemas:
+    School:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+      required: [id, name]
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required: [message]
+
+# ─── Paths (à remplir via le skill /nouvelle-fonctionnalite) ────────────────
+paths: {}
