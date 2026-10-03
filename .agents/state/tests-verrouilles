@@ -1,0 +1,34 @@
+# Registre des Tests d'Acceptation Verrouillés
+
+> Fonctionnalité : **F03 — « Je suis arrivé »**  
+> Date de verrouillage : 2026-10-03  
+> Fuseau de référence : `Africa/Casablanca`  
+> Statut initial : **ROUGE (Échecs valides sur routes 501 / squelette)**  
+> Règle : **Interdiction stricte de modifier ces fichiers de tests durant l'implémentation métier.**
+
+---
+
+## 1. Fichiers et Empreintes Cryptographiques (SHA-256)
+
+| Fichier de test | SHA-256 | Cible |
+| :--- | :--- | :--- |
+| `backend/tests/Feature/F03JeSuisArriveAcceptanceTest.php` | `e53580ed0b9bbc4ed7178966dbd8ec2a44f1f2aa79b1501325ee039557bae8fa` | Backend (Pest / PostgreSQL) |
+| `app_parent/test/features/sortie/presentation/je_suis_arrive_button_test.dart` | `46fa0415e81e8339f6661861aa57555fefdaa9f071dbc2a0dc81ab6d53e97624` | Flutter (Widget / Clock) |
+
+---
+
+## 2. Matrice des Critères d'Acceptation (CA1 à CA11)
+
+| Critère | Description | Comportement attendu | Statut actuel (Phase Rouge) |
+| :--- | :--- | :--- | :--- |
+| **CA1** | Signalement nominal | 201 Created + Arrival + PickupRequests `requested` | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA2** | Rejet hors fenêtre horaire | 422 Unprocessable Content | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA3** | Fuseau Africa/Casablanca & Ramadan | 201 en fenêtre Ramadan, 422 hors créneau Ramadan | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA4** | Signalement hors rayon (>300m) | 201 + statut `pending_agent_confirmation` + distance arrondie 10m | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA5** | Idempotence (Idempotency-Key) | Même réponse 201, même identifiant d'arrivée, 0 doublon | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA6** | Gestion fratrie | 1 Arrival regroupant plusieurs PickupRequests | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA7** | Droits parentaux | Rejet 422/404 si l'élève n'est pas sous la tutelle du parent | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA8** | Isolation inter-écoles | Accès école concurrente = **HTTP 404 strict** (jamais 403) | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA9** | Zéro persistance coordonnées (Loi 09-08) | 0 colonne lat/lng/latitude/longitude en base | 🔴 Vérifié (schéma respecté, zéro colonne GPS) |
+| **CA10** | Consultation statut arrivée | 200 OK avec structure complète de la file | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA11** | Bouton « Je suis arrivé » (Flutter) | Bouton inactif hors fenêtre, actif dans fenêtre, support FR/AR | 🔴 Rouge / Test unitaire prêt avec injection `clock.now()` |
