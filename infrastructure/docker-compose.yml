@@ -121,7 +121,7 @@ services:
 
   # ── MinIO (Stockage privé photos) ──────────────────────────
   minio:
-    image: minio/minio:latest
+    image: cgr.dev/chainguard/minio:latest
     container_name: sortie-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -145,7 +145,7 @@ services:
       - "8000:80"
       - "8443:443"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx:/etc/nginx/conf.d:ro
       - ../backend/public:/var/www/public:ro
     depends_on:
       - app
