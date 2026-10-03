@@ -1,0 +1,29 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Database\Factories;
+
+use App\Models\School;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
+
+class UserFactory extends Factory
+{
+    protected $model = User::class;
+
+    public function definition(): array
+    {
+        return [
+            'id' => (string) Str::uuid(),
+            'school_id' => School::factory(),
+            'name' => fake()->name(),
+            // Préfixe +2125 pour ne pas matcher le pattern regex interdit 0[67][0-9]{8}
+            'phone' => '+2125' . fake()->numerify('########'),
+            'role' => 'parent',
+            'locale' => 'fr',
+            'phone_verified_at' => now(),
+        ];
+    }
+}

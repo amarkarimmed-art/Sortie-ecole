@@ -50,5 +50,173 @@ components:
               type: string
       required: [message]
 
-# ─── Paths (à remplir via le skill /nouvelle-fonctionnalite) ────────────────
-paths: {}
+    ArrivalSignalRequest:
+      type: object
+      properties:
+        child_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: Identifiants des élèves concernés (fratrie)
+        in_radius:
+          type: boolean
+          description: Le parent est-il dans le rayon autorisé (200-300m)
+        distance_meters:
+          type: integer
+          minimum: 0
+          description: Distance arrondie aux 10m supérieurs (Loi 09-08)
+      required: [child_ids, in_radius]
+
+    PickupRequestSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        child_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - requested
+            - pending_agent_confirmation
+            - class_notified
+            - on_the_way
+            - handed_over
+            - cancelled
+            - expired
+        in_radius:
+          type: boolean
+        distance_meters:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required: [id, child_id, status]
+
+    ArrivalResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        school_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        in_radius:
+          type: boolean
+        distance_meters:
+          type: integer
+          nullable: true
+        pickup_requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickupRequestSummary'
+        created_at:
+          type: string
+          format: date-time
+      required: [id, school_id, user_id, in_radius, pickup_requests, created_at]
+
+    ArrivalStatusResponse:
+      type: object
+      properties:
+        arrival:
+          $ref: '#/components/schemas/ArrivalResponse'
+        pickup_requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickupRequestSummary'
+      required: [arrival, pickup_requests]
+
+# ─── Paths (F03 — « Je suis arrivé ») ───────────────────────────────────────
+paths:
+  /schools/{schoolId}/arrivals:
+    post:
+      summary: Signaler son arrivée devant l'école (F03)
+      description: |
+        Déclenché par le parent pendant la fenêtre autorisée.
+        Regroupe une fratrie sous un Arrival unique et génère les PickupRequest associées.
+        Respecte la loi 09-08 (aucune coordonnée GPS brute stockée).
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Clé d'idempotence pour éviter les doubles signalements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArrivalSignalRequest'
+      responses:
+        '201':
+          description: Arrivée signalée avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrivalResponse'
+        '404':
+          description: École ou élève introuvable (isolation multi-école)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Hors fenêtre horaire ou validation invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Non implémenté (phase squelette)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/arrivals/status:
+    get:
+      summary: Consulter le statut de la dernière arrivée
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Statut de l'arrivée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrivalStatusResponse'
+        '404':
+          description: Aucune arrivée active ou école introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '501':
+          description: Non implémenté (phase squelette)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+

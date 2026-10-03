@@ -48,8 +48,9 @@ abstract class BaseModel extends Model
 
     /**
      * Scope pour filtrer par école.
-     * Chaque modèle concret peut surcharger ce scope
-     * pour des besoins spécifiques.
      */
-    abstract public function scopeForSchool(Builder $query, string $schoolId): Builder;
+    public function scopeForSchool(Builder $query, string $schoolId): Builder
+    {
+        return $query->where($this->getTable() . '.school_id', $schoolId);
+    }
 }

@@ -22,8 +22,8 @@ use Illuminate\Support\Facades\Auth;
  *   {
  *       // Le trait est déjà appliqué via BaseModel.
  *   }
- *
- * Attention : Ne JAMAIS appeler withoutGlobalScopes() sans
+ * //
+ * // Note : Ne JAMAIS appeler withoutGlobalScopes() sans
  * justification explicite en commentaire d'architecture
  * (règle .agents/rules/regles_agent_style_laravel_backend.md).
  */
