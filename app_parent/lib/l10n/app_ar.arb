@@ -1,0 +1,17 @@
+{
+  "@@locale": "ar",
+  "jeSuisArrive": "وصلت إلى المدرسة",
+  "@jeSuisArrive": { "description": "Libellé du bouton principal pour signaler son arrivée devant l'école" },
+  "attenteConfirmation": "في انتظار تأكيد الإدارة",
+  "@attenteConfirmation": { "description": "Statut de la demande en attente de confirmation manuelle" },
+  "classePrevenue": "تم إشعار القسم",
+  "@classePrevenue": { "description": "Statut lorsque la classe de l'élève a été notifiée" },
+  "enfantEnRoute": "طفلكم في الطريق إلى البوابة",
+  "@enfantEnRoute": { "description": "Statut lorsque le surveillant a confirmé le départ de l'élève" },
+  "enfantRemis": "تم التسليم",
+  "@enfantRemis": { "description": "Statut final de la remise confirmée au portail" },
+  "demandeAnnulee": "ملغى",
+  "@demandeAnnulee": { "description": "Statut d'une demande de sortie annulée" },
+  "demandeExpiree": "منتهي الصلاحية",
+  "@demandeExpiree": { "description": "Statut d'une demande expirée en fin de fenêtre" }
+}

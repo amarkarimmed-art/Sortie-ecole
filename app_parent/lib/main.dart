@@ -26,7 +26,7 @@ class SortieParentApp extends StatelessWidget {
       ],
       home: const Scaffold(
         body: Center(
-          child: Text('Sortie d\'école — App Parent'),
+          child: Text('Sortie d\'école — App Parent'), // hardcoded-ok
         ),
       ),
     );
