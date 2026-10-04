@@ -20,17 +20,11 @@ Route::prefix('v1')->group(function () {
 
     // ── Routes protégées (Sanctum) ──────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
-        // ── F03 : « Je suis arrivé » (Squelette — 501 Not Implemented) ──
-        Route::post('/schools/{school}/arrivals', function () {
-            return response()->json([
-                'message' => 'Not Implemented — F03 Je suis arrivé',
-            ], 501);
-        })->name('arrivals.store');
+        // ── F03 : « Je suis arrivé » ────────────────────────────
+        Route::post('/schools/{school}/arrivals', [\App\Http\Controllers\Api\ArrivalController::class, 'store'])
+            ->name('arrivals.store');
 
-        Route::get('/schools/{school}/arrivals/status', function () {
-            return response()->json([
-                'message' => 'Not Implemented — F03 Statut arrivée',
-            ], 501);
-        })->name('arrivals.status');
+        Route::get('/schools/{school}/arrivals/status', [\App\Http\Controllers\Api\ArrivalController::class, 'status'])
+            ->name('arrivals.status');
     });
 });

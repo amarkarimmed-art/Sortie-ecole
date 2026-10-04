@@ -1,0 +1,53 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Requests;
+
+use App\Models\School;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+/**
+ * Validation de la requête de signalement d'arrivée (F03).
+ *
+ * Règles :
+ * - child_ids : tableau d'UUIDs non vide
+ * - in_radius : booléen requis
+ * - distance_meters : entier positif ou nul (nullable)
+ * - Zéro coordonnée GPS (lat/lng) admise (Loi 09-08)
+ */
+class SignalArrivalRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        $school = $this->route('school');
+        $user = $this->user();
+
+        if (! $user || ! $school) {
+            return false;
+        }
+
+        $schoolId = $school instanceof School ? $school->id : (string) $school;
+
+        // Isolation multi-tenant stricte : si l'école ne correspond pas, renvoyer 404 (ADR 0005)
+        if ($user->school_id !== $schoolId) {
+            abort(404, 'École introuvable.');
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'child_ids' => ['required', 'array', 'min:1'],
+            'child_ids.*' => ['required', 'uuid'],
+            'in_radius' => ['required', 'boolean'],
+            'distance_meters' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+}
