@@ -69,12 +69,12 @@ RUN_I18N=false
 
 for arg in "$@"; do
   case "$arg" in
-    --api)      RUN_API=true;      RUN_ALL=false ;;
-    --backend)  RUN_BACKEND=true;  RUN_ALL=false ;;
-    --flutter)  RUN_FLUTTER=true;  RUN_ALL=false ;;
-    --security) RUN_SECURITY=true; RUN_ALL=false ;;
-    --i18n)     RUN_I18N=true;     RUN_ALL=false ;;
-    --help|-h)
+    --api|api)          RUN_API=true;      RUN_ALL=false ;;
+    --backend|backend)  RUN_BACKEND=true;  RUN_ALL=false ;;
+    --flutter|flutter)  RUN_FLUTTER=true;  RUN_ALL=false ;;
+    --security|security) RUN_SECURITY=true; RUN_ALL=false ;;
+    --i18n|i18n)     RUN_I18N=true;     RUN_ALL=false ;;
+    --help|-h|help)
       head -n 18 "$0" | tail -n 12
       exit 0
       ;;
