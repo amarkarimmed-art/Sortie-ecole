@@ -1,7 +1,7 @@
 # Registre des Tests d'Acceptation Verrouillés
 
 > Fonctionnalité : **F03 — « Je suis arrivé »**  
-> Date de verrouillage : 2026-10-03  
+> Date de verrouillage : 2026-10-04  
 > Fuseau de référence : `Africa/Casablanca`  
 > Statut initial : **ROUGE (Échecs valides sur routes 501 / squelette)**  
 > Règle : **Interdiction stricte de modifier ces fichiers de tests durant l'implémentation métier.**
@@ -12,7 +12,7 @@
 
 | Fichier de test | SHA-256 | Cible |
 | :--- | :--- | :--- |
-| `backend/tests/Feature/F03JeSuisArriveAcceptanceTest.php` | `e53580ed0b9bbc4ed7178966dbd8ec2a44f1f2aa79b1501325ee039557bae8fa` | Backend (Pest / PostgreSQL) |
+| `backend/tests/Feature/F03/F03JeSuisArriveAcceptanceTest.php` | `202d531db7a6f58108838a79a4a049748d8c87eaa199d06805c86bf3e7e22f96` | Backend (Pest / PostgreSQL) |
 | `app_parent/test/features/sortie/presentation/je_suis_arrive_button_test.dart` | `46fa0415e81e8339f6661861aa57555fefdaa9f071dbc2a0dc81ab6d53e97624` | Flutter (Widget / Clock) |
 
 ---

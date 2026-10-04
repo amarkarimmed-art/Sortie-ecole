@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+namespace Tests\Feature\F03;
 
 use App\Models\Arrival;
 use App\Models\Child;
@@ -338,6 +338,7 @@ test('CA8 : Une tentative de signalement pour une autre école retourne impérat
 */
 test('CA9 : Aucune coordonnée GPS brute n\'est admise ni stockée en base de données', function () {
     // Vérification du schéma des tables liées aux arrivées
+    $tables = ['arrivals', 'pickup_requests'];
     // Construction dynamique pour ne pas déclencher le linter de vérification sur les migrations
     $forbiddenColumns = ['l'.'at', 'l'.'ng', 'l'.'atitude', 'l'.'ongitude', 'location', 'coordinates'];
 
