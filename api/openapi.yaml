@@ -50,6 +50,52 @@ components:
               type: string
       required: [message]
 
+    LoginRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+      required: [phone]
+
+    VerifyRequest:
+      type: object
+      properties:
+        phone:
+          type: string
+        code:
+          type: string
+      required: [phone, code]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          type: object
+      required: [token, user]
+
+    HandoverLog:
+      type: object
+      description: Journal de remise en ajout seul (règle 09-08 / sécurité)
+      properties:
+        id:
+          type: string
+          format: uuid
+        pickup_request_id:
+          type: string
+          format: uuid
+        school_id:
+          type: string
+          format: uuid
+        agent_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required: [id, pickup_request_id, school_id, agent_id, created_at]
+
     ArrivalSignalRequest:
       type: object
       properties:
@@ -135,8 +181,200 @@ components:
             $ref: '#/components/schemas/PickupRequestSummary'
       required: [arrival, pickup_requests]
 
-# ─── Paths (F03 — « Je suis arrivé ») ───────────────────────────────────────
+# ─── Paths (F01, F02, F03, F04) ─────────────────────────────────────────────
 paths:
+  /auth/login:
+    post:
+      summary: Demander un code SMS (F01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Code envoyé
+        '404':
+          description: Utilisateur non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify:
+    post:
+      summary: Vérifier le code SMS et obtenir un jeton (F01)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyRequest'
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Code invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/students/import:
+    post:
+      summary: Importer des élèves via CSV (F01)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import réussi
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: École introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/queue:
+    get:
+      summary: Récupérer la file d'attente de la tablette (F02)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File d'attente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PickupRequestSummary'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: École introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/pickup-requests/{requestId}/handover:
+    post:
+      summary: Marquer un enfant comme "Remis" (F02)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Remise enregistrée (ajout au journal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoverLog'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Requête ou école introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/pickup-requests/{requestId}/depart:
+    post:
+      summary: Marquer un enfant comme "Parti" par le surveillant (F04)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Départ enregistré
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Requête ou école introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /schools/{schoolId}/arrivals:
     post:
       summary: Signaler son arrivée devant l'école (F03)
