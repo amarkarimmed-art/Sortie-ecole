@@ -19,6 +19,7 @@ services:
     working_dir: /var/www
     volumes:
       - ../backend:/var/www
+      - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -42,6 +43,14 @@ services:
       AWS_DEFAULT_REGION: us-east-1
       AWS_BUCKET: photos
       AWS_USE_PATH_STYLE_ENDPOINT: "true"
+    dns:
+      - 8.8.8.8
+    extra_hosts:
+      - "repo.packagist.org:143.244.56.56"
+      - "packagist.org:185.93.2.244"
+      - "github.com:140.82.121.4"
+      - "api.github.com:140.82.121.6"
+      - "codeload.github.com:140.82.121.9"
     depends_on:
       postgresql:
         condition: service_healthy
@@ -99,6 +108,7 @@ services:
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
     volumes:
       - ../backend:/var/www
+      - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
       DB_CONNECTION: pgsql
@@ -111,6 +121,8 @@ services:
       REDIS_PORT: 6379
     ports:
       - "8080:8080"
+    dns:
+      - 8.8.8.8
     depends_on:
       postgresql:
         condition: service_healthy
@@ -162,6 +174,7 @@ services:
     working_dir: /var/www
     volumes:
       - ../backend:/var/www
+      - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -175,6 +188,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       FILAMENT_DOMAIN: admin.sortie-ecole.ma
+    dns:
+      - 8.8.8.8
     depends_on:
       postgresql:
         condition: service_healthy
@@ -189,6 +204,8 @@ volumes:
   redisdata:
     driver: local
   miniodata:
+    driver: local
+  vendor_app:
     driver: local
 
 networks:
