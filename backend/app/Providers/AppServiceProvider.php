@@ -29,14 +29,18 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         // ── Repository bindings ─────────────────────────────
-        // Ajouter ici les liaisons interface → implémentation
-        // au fur et à mesure des features.
-        //
-        // Exemple :
-        // $this->app->bind(
-        //     \App\Repositories\Contracts\RepositoryInterface::class,
-        //     \App\Repositories\PickupRepository::class
-        // );
+        $this->app->bind(
+            \App\Repositories\Contracts\ArrivalRepositoryInterface::class,
+            \App\Repositories\ArrivalRepository::class
+        );
+        $this->app->bind(
+            \App\Repositories\Contracts\PickupRequestRepositoryInterface::class,
+            \App\Repositories\PickupRequestRepository::class
+        );
+        $this->app->bind(
+            \App\Repositories\Contracts\PickupWindowRepositoryInterface::class,
+            \App\Repositories\PickupWindowRepository::class
+        );
     }
 
     /**

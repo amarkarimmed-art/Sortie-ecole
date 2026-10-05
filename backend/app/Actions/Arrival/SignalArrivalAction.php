@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Actions\Arrival;
 
 use App\Actions\BaseAction;
-use App\Models\Arrival;
 use App\Models\PickupRequest;
 use App\Models\PickupWindow;
 use App\Models\School;
 use App\Models\User;
+use App\Repositories\Contracts\ArrivalRepositoryInterface;
+use App\Repositories\Contracts\PickupRequestRepositoryInterface;
+use App\Repositories\Contracts\PickupWindowRepositoryInterface;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,12 @@ use Illuminate\Support\Str;
  */
 class SignalArrivalAction extends BaseAction
 {
+    public function __construct(
+        private readonly ArrivalRepositoryInterface $arrivalRepository,
+        private readonly PickupRequestRepositoryInterface $pickupRequestRepository,
+        private readonly PickupWindowRepositoryInterface $pickupWindowRepository,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $data
      * @return Model|array<string, mixed>
@@ -50,10 +58,7 @@ class SignalArrivalAction extends BaseAction
 
         // 2. Gestion de l'idempotence (CA5)
         if ($idempotencyKey !== null) {
-            $existingArrival = Arrival::withoutGlobalScopes()
-                ->where('school_id', $schoolId)
-                ->where('idempotency_key', $idempotencyKey)
-                ->first();
+            $existingArrival = $this->arrivalRepository->findByIdempotencyKeyAndSchool($idempotencyKey, $schoolId);
 
             if ($existingArrival) {
                 return $existingArrival->load('pickupRequests');
@@ -74,10 +79,7 @@ class SignalArrivalAction extends BaseAction
         $dayOfWeek = $now->dayOfWeekIso; // 1 = Lundi, ..., 7 = Dimanche
         $currentTime = $now->format('H:i:s');
 
-        $windows = PickupWindow::withoutGlobalScopes()
-            ->where('school_id', $schoolId)
-            ->where('day_of_week', $dayOfWeek)
-            ->get();
+        $windows = $this->pickupWindowRepository->getWindowsForSchoolAndDay($schoolId, $dayOfWeek);
 
         $isInWindow = $windows->contains(function (PickupWindow $window) use ($currentTime) {
             return $currentTime >= $window->start_time && $currentTime <= $window->end_time;
@@ -94,7 +96,7 @@ class SignalArrivalAction extends BaseAction
                 ? (int) $data['distance_meters']
                 : null;
 
-            $arrival = Arrival::create([
+            $arrival = $this->arrivalRepository->create([
                 'school_id' => $schoolId,
                 'user_id' => $user->id,
                 'in_radius' => $inRadius,
@@ -107,7 +109,7 @@ class SignalArrivalAction extends BaseAction
                 : PickupRequest::STATUS_PENDING_AGENT_CONFIRMATION;
 
             foreach ($childIds as $childId) {
-                PickupRequest::create([
+                $this->pickupRequestRepository->create([
                     'school_id' => $schoolId,
                     'arrival_id' => $arrival->id,
                     'child_id' => $childId,

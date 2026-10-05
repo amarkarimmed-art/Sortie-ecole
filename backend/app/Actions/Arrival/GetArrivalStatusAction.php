@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Actions\Arrival;
 
 use App\Actions\BaseAction;
-use App\Models\Arrival;
 use App\Models\School;
 use App\Models\User;
+use App\Repositories\Contracts\ArrivalRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -15,6 +15,10 @@ use Illuminate\Database\Eloquent\Model;
  */
 class GetArrivalStatusAction extends BaseAction
 {
+    public function __construct(
+        private readonly ArrivalRepositoryInterface $arrivalRepository
+    ) {}
+
     /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -32,10 +36,7 @@ class GetArrivalStatusAction extends BaseAction
             abort(404, 'École introuvable.');
         }
 
-        $latestArrival = Arrival::where('user_id', $user->id)
-            ->where('school_id', $schoolId)
-            ->latest()
-            ->first();
+        $latestArrival = $this->arrivalRepository->findLatestForUserAndSchool((string) $user->id, $schoolId);
 
         return [
             'arrival' => $latestArrival,
