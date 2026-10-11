@@ -18,7 +18,7 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     volumes:
-      - ../backend:/var/www
+      - C:/prog/Sortie-ecole/backend:/var/www
       - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
@@ -107,7 +107,7 @@ services:
     working_dir: /var/www
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
     volumes:
-      - ../backend:/var/www
+      - C:/prog/Sortie-ecole/backend:/var/www
       - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
@@ -157,8 +157,8 @@ services:
       - "8000:80"
       - "8443:443"
     volumes:
-      - ./nginx:/etc/nginx/conf.d:ro
-      - ../backend/public:/var/www/public:ro
+      - ./nginx_config:/etc/nginx/conf.d:ro
+      - C:/prog/Sortie-ecole/backend/public:/var/www/public:ro
     depends_on:
       - app
     networks:
@@ -173,7 +173,7 @@ services:
     restart: unless-stopped
     working_dir: /var/www
     volumes:
-      - ../backend:/var/www
+      - C:/prog/Sortie-ecole/backend:/var/www
       - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
