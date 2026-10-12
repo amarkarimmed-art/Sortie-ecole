@@ -2,6 +2,9 @@ openapi: "3.1.0"
 info:
   title: Sortie d'école API
   version: 0.1.0
+  license:
+    name: Proprietary
+    identifier: UNLICENSED
   description: |
     API de gestion sécurisée des sorties scolaires.
     Source de vérité du projet (ADR 0001 — Contract-First).
@@ -11,7 +14,7 @@ info:
 servers:
   - url: https://api.sortie-ecole.ma/v1
     description: Production (VPS Maroc)
-  - url: http://localhost:8000/api/v1
+  - url: http://127.0.0.1:8000/api/v1
     description: Développement local
 
 # ─── Sécurité ───────────────────────────────────────────────────────────────
@@ -27,16 +30,6 @@ components:
 
   # ─── Schemas réutilisables (à compléter feature par feature) ──────────────
   schemas:
-    School:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-      required: [id, name]
-
     Error:
       type: object
       properties:
@@ -137,8 +130,7 @@ components:
         in_radius:
           type: boolean
         distance_meters:
-          type: integer
-          nullable: true
+          type: ["integer", "null"]
         created_at:
           type: string
           format: date-time
@@ -159,8 +151,7 @@ components:
         in_radius:
           type: boolean
         distance_meters:
-          type: integer
-          nullable: true
+          type: ["integer", "null"]
         pickup_requests:
           type: array
           items:
@@ -185,6 +176,7 @@ components:
 paths:
   /auth/login:
     post:
+      operationId: loginRequest
       summary: Demander un code SMS (F01)
       requestBody:
         required: true
@@ -204,6 +196,7 @@ paths:
 
   /auth/verify:
     post:
+      operationId: verifyCode
       summary: Vérifier le code SMS et obtenir un jeton (F01)
       requestBody:
         required: true
@@ -233,6 +226,7 @@ paths:
 
   /schools/{schoolId}/students/import:
     post:
+      operationId: importStudents
       summary: Importer des élèves via CSV (F01)
       security:
         - sanctum: []
@@ -271,6 +265,7 @@ paths:
 
   /schools/{schoolId}/queue:
     get:
+      operationId: getQueue
       summary: Récupérer la file d'attente de la tablette (F02)
       security:
         - sanctum: []
@@ -305,6 +300,7 @@ paths:
 
   /schools/{schoolId}/pickup-requests/{requestId}/handover:
     post:
+      operationId: markHandover
       summary: Marquer un enfant comme "Remis" (F02)
       security:
         - sanctum: []
@@ -343,6 +339,7 @@ paths:
 
   /schools/{schoolId}/pickup-requests/{requestId}/depart:
     post:
+      operationId: markDepart
       summary: Marquer un enfant comme "Parti" par le surveillant (F04)
       security:
         - sanctum: []
@@ -377,6 +374,7 @@ paths:
 
   /schools/{schoolId}/arrivals:
     post:
+      operationId: signalArrival
       summary: Signaler son arrivée devant l'école (F03)
       description: |
         Déclenché par le parent pendant la fenêtre autorisée.
@@ -430,6 +428,7 @@ paths:
 
   /schools/{schoolId}/arrivals/status:
     get:
+      operationId: getArrivalStatus
       summary: Consulter le statut de la dernière arrivée
       parameters:
         - name: schoolId
