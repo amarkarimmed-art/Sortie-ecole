@@ -15,5 +15,22 @@
   "enfantEnRoute": "Votre enfant arrive",
   "enfantRemis": "Remis",
   "demandeAnnulee": "Annulé",
-  "demandeExpiree": "Expiré"
+  "demandeExpiree": "Expiré",
+  "rechercheGps": "Recherche du signal GPS...",
+  "envoiSignalement": "Envoi du signalement à l'école...",
+  "arriveeConfirmee": "Arrivée confirmée",
+  "arriveeConfirmeeDesc": "Votre présence a bien été enregistrée par l'école.",
+  "horsRayon": "Trop loin de l'école",
+  "horsRayonDesc": "Vous devez être à proximité immédiate de l'établissement scolaire pour signaler votre arrivée.",
+  "limiteRequetes": "Limite atteinte",
+  "limiteRequetesDesc": "Trop de tentatives rapprochées. Veuillez patienter un instant avant de réessayer.",
+  "gpsNonAutorise": "Localisation non autorisée",
+  "gpsNonAutoriseDesc": "L'autorisation d'accès GPS est nécessaire pour confirmer votre présence devant l'école.",
+  "gpsDesactive": "GPS désactivé",
+  "gpsDesactiveDesc": "Veuillez activer les services de localisation sur votre appareil pour continuer.",
+  "erreurReseau": "Erreur de connexion",
+  "erreurReseauDesc": "Impossible de contacter l'école. Vérifiez votre connexion Internet.",
+  "reessayer": "Réessayer",
+  "rafraichir": "Actualiser la position",
+  "signalerArrivee": "Signaler mon arrivée"
 }
