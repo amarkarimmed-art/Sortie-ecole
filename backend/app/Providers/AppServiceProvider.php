@@ -41,6 +41,19 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\Contracts\PickupWindowRepositoryInterface::class,
             \App\Repositories\PickupWindowRepository::class
         );
+
+        // ── Service bindings ────────────────────────────────
+        $this->app->bind(
+            \App\Contracts\SmsGatewayInterface::class,
+            function () {
+                $driver = env('SMS_DRIVER', 'log');
+
+                return match ($driver) {
+                    'stub' => new \App\Services\Sms\StubSmsGateway(),
+                    default => new \App\Services\Sms\LogSmsGateway(),
+                };
+            }
+        );
     }
 
     /**

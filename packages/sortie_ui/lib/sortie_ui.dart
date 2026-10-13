@@ -10,3 +10,6 @@
 /// - Cibles tactiles ≥ 48dp
 /// - Fort contraste pour usage en plein soleil
 library sortie_ui;
+
+export 'src/theme.dart';
+export 'src/buttons.dart';

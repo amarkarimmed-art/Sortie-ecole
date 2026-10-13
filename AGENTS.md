@@ -7,7 +7,7 @@
 Ce projet est structuré en monorepo (ADR 0001) :
 
 | Dossier | Contenu | Technologie |
-|---------|---------|-------------|
+| ------- | ------- | ----------- |
 | `api/` | Contrat OpenAPI — source de vérité | OpenAPI 3.1 |
 | `backend/` | API, logique métier, back-office | Laravel 11+, PostgreSQL 16+, Redis |
 | `app_parent/` | App mobile tuteurs (iOS/Android) | Flutter |
