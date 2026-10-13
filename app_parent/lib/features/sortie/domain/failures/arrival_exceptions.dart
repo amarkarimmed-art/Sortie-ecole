@@ -35,3 +35,15 @@ class ServerArrivalException extends ArrivalException {
     super.message = 'Une erreur interne est survenue sur le serveur.',
   ]);
 }
+
+class LocationServiceDisabledException extends ArrivalException {
+  const LocationServiceDisabledException([
+    super.message = 'Les services de localisation GPS sont désactivés sur votre appareil.',
+  ]);
+}
+
+class LocationPermissionDeniedException extends ArrivalException {
+  const LocationPermissionDeniedException([
+    super.message = 'L\'autorisation d\'accès à la position GPS a été refusée.',
+  ]);
+}
