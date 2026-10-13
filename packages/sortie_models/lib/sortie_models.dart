@@ -8,3 +8,5 @@ export 'src/auth.dart';
 export 'src/user.dart';
 export 'src/child.dart';
 export 'src/arrival.dart';
+export 'src/arrival_signal_request.dart';
+export 'src/arrival_response.dart';

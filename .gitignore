@@ -33,6 +33,12 @@ app_ecole/.flutter-plugins
 app_ecole/.flutter-plugins-dependencies
 app_ecole/pubspec.lock
 
+# ── Packages partagés ────────────────────────────────────────
+packages/*/.dart_tool/
+packages/*/.packages
+packages/*/build/
+packages/*/pubspec.lock
+
 # ── IDE ──────────────────────────────────────────────────────
 .idea/
 .vscode/
