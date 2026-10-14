@@ -9,6 +9,8 @@ use App\Exceptions\Queue\HandoverImpossibleException;
 use App\Models\HandoverLog;
 use App\Models\PickupRequest;
 use App\Models\User;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -30,6 +32,11 @@ class HandoverAction
         string $collectorType,
         ?string $collectorId = null
     ): HandoverLog {
+        // 0. Contrôle d'isolation multi-école (défense en profondeur)
+        if ((string) $request->school_id !== (string) $agent->school_id) {
+            throw new ModelNotFoundException('Demande introuvable pour cette école.');
+        }
+
         // a. Vérifier si une remise a déjà été effectuée avec cette idempotency_key (rejeu réseau idempotent)
         $existingLog = HandoverLog::where('idempotency_key', $idempotencyKey)->first();
         if ($existingLog) {
@@ -50,32 +57,51 @@ class HandoverAction
             );
         }
 
-        // c. Enregistrement en transaction DB
-        return DB::transaction(function () use ($request, $agent, $idempotencyKey, $collectorType, $collectorId) {
-            $parentUserId = ($collectorType === HandoverLog::COLLECTOR_PARENT)
-                ? ($collectorId ?? $request->requested_by)
-                : null;
+        // c. Enregistrement en transaction DB avec verrouillage pessimiste et gestion de la concurrence
+        try {
+            return DB::transaction(function () use ($request, $agent, $idempotencyKey, $collectorType, $collectorId, $activeStatuses) {
+                $locked = PickupRequest::where('id', $request->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            $authorizedPersonId = ($collectorType === HandoverLog::COLLECTOR_AUTHORIZED_PERSON)
-                ? $collectorId
-                : null;
+                if (! in_array($locked->status, $activeStatuses, true)) {
+                    throw new HandoverImpossibleException(
+                        "Impossible d'effectuer une remise pour une demande au statut '{$locked->status}'."
+                    );
+                }
 
-            $log = HandoverLog::create([
-                'id' => (string) Str::uuid(),
-                'school_id' => $request->school_id,
-                'pickup_request_id' => $request->id,
-                'agent_id' => $agent->id,
-                'collector_type' => $collectorType,
-                'parent_user_id' => $parentUserId,
-                'authorized_person_id' => $authorizedPersonId,
-                'idempotency_key' => $idempotencyKey,
-            ]);
+                $parentUserId = ($collectorType === HandoverLog::COLLECTOR_PARENT)
+                    ? ($collectorId ?? $locked->requested_by)
+                    : null;
 
-            $request->update([
-                'status' => PickupRequest::STATUS_HANDED_OVER,
-            ]);
+                $authorizedPersonId = ($collectorType === HandoverLog::COLLECTOR_AUTHORIZED_PERSON)
+                    ? $collectorId
+                    : null;
 
-            return $log;
-        });
+                $log = HandoverLog::create([
+                    'id' => (string) Str::uuid(),
+                    'school_id' => $locked->school_id,
+                    'pickup_request_id' => $locked->id,
+                    'agent_id' => $agent->id,
+                    'collector_type' => $collectorType,
+                    'parent_user_id' => $parentUserId,
+                    'authorized_person_id' => $authorizedPersonId,
+                    'idempotency_key' => $idempotencyKey,
+                ]);
+
+                $locked->update([
+                    'status' => PickupRequest::STATUS_HANDED_OVER,
+                ]);
+
+                return $log;
+            });
+        } catch (UniqueConstraintViolationException $e) {
+            $existing = HandoverLog::where('idempotency_key', $idempotencyKey)->first();
+            if ($existing) {
+                throw new HandoverDejaEnregistreException($existing);
+            }
+
+            throw $e;
+        }
     }
 }
