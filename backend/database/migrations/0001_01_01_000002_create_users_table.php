@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('school_id')
-                  ->constrained('schools')
-                  ->cascadeOnDelete();
+                ->constrained('schools')
+                ->cascadeOnDelete();
             $table->string('name');
             $table->string('phone')->unique();
             $table->string('role'); // parent, agent, surveillant, direction

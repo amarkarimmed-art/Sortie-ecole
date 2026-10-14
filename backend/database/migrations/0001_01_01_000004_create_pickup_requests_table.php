@@ -18,14 +18,14 @@ return new class extends Migration
         Schema::create('pickup_requests', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('school_id')
-                  ->constrained('schools')
-                  ->cascadeOnDelete();
+                ->constrained('schools')
+                ->cascadeOnDelete();
             $table->foreignUuid('child_id')
-                  ->constrained('children')
-                  ->cascadeOnDelete();
+                ->constrained('children')
+                ->cascadeOnDelete();
             $table->foreignUuid('requested_by')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+                ->constrained('users')
+                ->cascadeOnDelete();
             $table->string('status')->default('requested');
             // Pas de lat/lng — uniquement in_radius et distance arrondie (Loi 09-08)
             $table->boolean('in_radius')->default(false);

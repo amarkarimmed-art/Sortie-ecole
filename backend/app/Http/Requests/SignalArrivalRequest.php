@@ -6,7 +6,6 @@ namespace App\Http\Requests;
 
 use App\Models\School;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
  * Validation de la requête de signalement d'arrivée (F03).

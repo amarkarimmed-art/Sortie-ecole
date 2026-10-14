@@ -52,8 +52,8 @@ class User extends Authenticatable
     public function children(): BelongsToMany
     {
         return $this->belongsToMany(Child::class, 'child_user')
-                    ->withPivot('relationship')
-                    ->withTimestamps();
+            ->withPivot('relationship')
+            ->withTimestamps();
     }
 
     public function arrivals(): HasMany

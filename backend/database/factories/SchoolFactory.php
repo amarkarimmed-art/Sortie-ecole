@@ -16,7 +16,7 @@ class SchoolFactory extends Factory
     {
         return [
             'id' => (string) Str::uuid(),
-            'name' => 'École Test ' . fake()->city(),
+            'name' => 'École Test '.fake()->city(),
         ];
     }
 }

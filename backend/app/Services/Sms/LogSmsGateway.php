@@ -21,6 +21,6 @@ class LogSmsGateway implements SmsGatewayInterface
 {
     public function send(string $phone, string $message): void
     {
-        Log::info('[SMS] TO=' . $phone . ' | MSG=' . $message);
+        Log::info('[SMS] TO='.$phone.' | MSG='.$message);
     }
 }

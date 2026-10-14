@@ -33,9 +33,9 @@ abstract class BaseService implements ServiceInterface
     /**
      * Valider les données entrantes.
      *
-     * @param  array<string, mixed>  $data   Données à valider
+     * @param  array<string, mixed>  $data  Données à valider
      * @param  array<string, mixed>  $rules  Règles de validation Laravel
-     * @return array<string, mixed>          Données validées
+     * @return array<string, mixed> Données validées
      *
      * @throws ValidationException
      */

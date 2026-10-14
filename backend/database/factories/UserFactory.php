@@ -20,7 +20,7 @@ class UserFactory extends Factory
             'school_id' => School::factory(),
             'name' => fake()->name(),
             // Préfixe +2125 pour ne pas matcher le pattern regex interdit 0[67][0-9]{8}
-            'phone' => '+2125' . fake()->numerify('########'),
+            'phone' => '+2125'.fake()->numerify('########'),
             'role' => 'parent',
             'locale' => 'fr',
             'phone_verified_at' => now(),

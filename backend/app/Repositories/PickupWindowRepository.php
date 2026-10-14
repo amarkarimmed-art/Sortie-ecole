@@ -10,9 +10,6 @@ use Illuminate\Support\Collection;
 
 class PickupWindowRepository extends BaseRepository implements PickupWindowRepositoryInterface
 {
-    /**
-     * @return string
-     */
     protected function getModel(): string
     {
         return PickupWindow::class;

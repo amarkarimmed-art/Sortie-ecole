@@ -19,8 +19,8 @@ class Child extends BaseModel
     public function parents(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'child_user')
-                    ->withPivot('relationship')
-                    ->withTimestamps();
+            ->withPivot('relationship')
+            ->withTimestamps();
     }
 
     public function pickupRequests(): HasMany

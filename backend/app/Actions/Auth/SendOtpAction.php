@@ -46,7 +46,7 @@ class SendOtpAction extends BaseAction
         $phone = (string) $data['phone'];
 
         // 1. Rate limiting par numéro de téléphone (R2)
-        $rateLimiterKey = 'otp:' . $phone;
+        $rateLimiterKey = 'otp:'.$phone;
 
         if (RateLimiter::tooManyAttempts($rateLimiterKey, self::MAX_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($rateLimiterKey);
@@ -68,7 +68,7 @@ class SendOtpAction extends BaseAction
 
         // 4. Générer l'OTP à 6 chiffres et le stocker dans Redis
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $cacheKey = 'otp:code:' . $phone;
+        $cacheKey = 'otp:code:'.$phone;
 
         Cache::put($cacheKey, $otp, self::OTP_TTL_SECONDS);
 

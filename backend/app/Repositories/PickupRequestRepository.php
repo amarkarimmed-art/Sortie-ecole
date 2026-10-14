@@ -9,9 +9,6 @@ use App\Repositories\Contracts\PickupRequestRepositoryInterface;
 
 class PickupRequestRepository extends BaseRepository implements PickupRequestRepositoryInterface
 {
-    /**
-     * @return string
-     */
     protected function getModel(): string
     {
         return PickupRequest::class;

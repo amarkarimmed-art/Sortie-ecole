@@ -14,11 +14,11 @@ return new class extends Migration
     {
         Schema::create('child_user', function (Blueprint $table) {
             $table->foreignUuid('child_id')
-                  ->constrained('children')
-                  ->cascadeOnDelete();
+                ->constrained('children')
+                ->cascadeOnDelete();
             $table->foreignUuid('user_id')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+                ->constrained('users')
+                ->cascadeOnDelete();
             $table->string('relationship')->default('parent'); // pere, mere, tuteur
             $table->timestamps();
 

@@ -51,6 +51,6 @@ abstract class BaseModel extends Model
      */
     public function scopeForSchool(Builder $query, string $schoolId): Builder
     {
-        return $query->where($this->getTable() . '.school_id', $schoolId);
+        return $query->where($this->getTable().'.school_id', $schoolId);
     }
 }

@@ -19,12 +19,11 @@ use Laravel\Sanctum\Sanctum;
  *
  * Couvre les critères d'acceptation CA1 à CA7.
  */
-
 beforeEach(function () {
     date_default_timezone_set('Africa/Casablanca');
 
     // Utiliser le StubSmsGateway pour inspecter les SMS envoyés
-    $this->stubSms = new StubSmsGateway();
+    $this->stubSms = new StubSmsGateway;
     $this->app->instance(SmsGatewayInterface::class, $this->stubSms);
 
     Cache::flush();
@@ -48,7 +47,7 @@ test('CA1 : Un utilisateur existant peut demander un code OTP par SMS', function
     ]);
 
     $response->assertStatus(200)
-             ->assertJson(['message' => 'Code envoyé par SMS.']);
+        ->assertJson(['message' => 'Code envoyé par SMS.']);
 
     // Vérifier l'envoi du SMS via le Stub
     expect($this->stubSms->getSentMessages())->toHaveCount(1);
@@ -96,17 +95,17 @@ test('CA3 : La vérification d\'un code OTP valide retourne un token Sanctum et 
     ]);
 
     $response->assertStatus(200)
-             ->assertJsonStructure([
-                 'token',
-                 'user' => [
-                     'id',
-                     'name',
-                     'phone',
-                     'role',
-                     'locale',
-                     'school_id',
-                 ],
-             ]);
+        ->assertJsonStructure([
+            'token',
+            'user' => [
+                'id',
+                'name',
+                'phone',
+                'role',
+                'locale',
+                'school_id',
+            ],
+        ]);
 
     // L'OTP doit avoir été invalidé immédiatement (one-time)
     expect(Cache::get('otp:code:+212612345678'))->toBeNull();
@@ -187,8 +186,8 @@ test('CA6 : Le directeur peut importer des élèves via CSV avec telephone2 opti
     Sanctum::actingAs($director);
 
     $csvContent = "prenom,nom,classe,telephone1,telephone2\n"
-        . "Aicha,Benali,CE1,+212612345678,+212698765432\n"
-        . "Youssef,Alami,CP,+212611111111,\n";
+        ."Aicha,Benali,CE1,+212612345678,+212698765432\n"
+        ."Youssef,Alami,CP,+212611111111,\n";
 
     $file = UploadedFile::fake()->createWithContent('eleves.csv', $csvContent);
 
@@ -197,11 +196,11 @@ test('CA6 : Le directeur peut importer des élèves via CSV avec telephone2 opti
     ]);
 
     $response->assertStatus(200)
-             ->assertJson([
-                 'created' => 2,
-                 'errors' => [],
-                 'total_processed' => 2,
-             ]);
+        ->assertJson([
+            'created' => 2,
+            'errors' => [],
+            'total_processed' => 2,
+        ]);
 
     // Vérifier la création des élèves
     $child1 = Child::withoutGlobalScopes()->where('first_name', 'Aicha')->first();
@@ -220,10 +219,10 @@ test('CA6 : Le directeur peut importer des élèves via CSV avec telephone2 opti
     ]);
 
     $response2->assertStatus(200)
-              ->assertJson([
-                  'created' => 0,
-                  'updated' => 2,
-              ]);
+        ->assertJson([
+            'created' => 0,
+            'updated' => 2,
+        ]);
 });
 
 /*
@@ -245,7 +244,7 @@ test('CA7 : L\'import CSV est rejeté pour un parent (403) ou pour une autre éc
         'role' => 'director',
     ]);
 
-    $file = UploadedFile::fake()->createWithContent("eleves.csv", "prenom,nom,classe,telephone1\nAli,Test,CE1,+212600000000\n");
+    $file = UploadedFile::fake()->createWithContent('eleves.csv', "prenom,nom,classe,telephone1\nAli,Test,CE1,+212600000000\n");
 
     // Parent -> 403
     Sanctum::actingAs($parent);

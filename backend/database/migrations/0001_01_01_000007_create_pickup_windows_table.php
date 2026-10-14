@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Table des fenêtres de sortie par école (pickup_windows).
- * 
+ *
  * Permet de définir les plages autorisées pour signaler son arrivée (F03).
  * Prévient les sorties hors créneaux (CA2, CA3) et supporte le régime Ramadan.
  */
@@ -17,8 +17,8 @@ return new class extends Migration
         Schema::create('pickup_windows', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('school_id')
-                  ->constrained('schools')
-                  ->cascadeOnDelete();
+                ->constrained('schools')
+                ->cascadeOnDelete();
             $table->unsignedTinyInteger('day_of_week'); // 1 = Lundi, 7 = Dimanche
             $table->time('start_time'); // ex: 15:20:00
             $table->time('end_time');   // ex: 16:00:00

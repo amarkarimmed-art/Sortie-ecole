@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::table('pickup_requests', function (Blueprint $table) {
             $table->foreignUuid('arrival_id')
-                  ->nullable()
-                  ->after('requested_by')
-                  ->constrained('arrivals')
-                  ->nullOnDelete();
+                ->nullable()
+                ->after('requested_by')
+                ->constrained('arrivals')
+                ->nullOnDelete();
 
             $table->index('arrival_id');
         });

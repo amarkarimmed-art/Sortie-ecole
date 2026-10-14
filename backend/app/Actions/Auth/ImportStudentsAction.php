@@ -6,6 +6,7 @@ namespace App\Actions\Auth;
 
 use App\Actions\BaseAction;
 use App\Models\Child;
+use App\Models\School;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -30,11 +31,11 @@ class ImportStudentsAction extends BaseAction
 {
     /**
      * @param  array<string, mixed>  $data  ['school' => School, 'file' => UploadedFile]
-     * @return array<string, mixed>  ['created' => int, 'updated' => int, 'errors' => array]
+     * @return array<string, mixed> ['created' => int, 'updated' => int, 'errors' => array]
      */
     public function handle(array $data): Model|array
     {
-        /** @var \App\Models\School $school */
+        /** @var School $school */
         $school = $data['school'];
         /** @var UploadedFile $file */
         $file = $data['file'];
@@ -59,7 +60,7 @@ class ImportStudentsAction extends BaseAction
             $header = fgetcsv($handle);
 
             if ($header === false || count($header) < 4) {
-                abort(422, "Format CSV invalide. Colonnes attendues : prenom,nom,classe,telephone1[,telephone2]");
+                abort(422, 'Format CSV invalide. Colonnes attendues : prenom,nom,classe,telephone1[,telephone2]');
             }
 
             while (($row = fgetcsv($handle)) !== false) {
@@ -71,6 +72,7 @@ class ImportStudentsAction extends BaseAction
                 // Valider le minimum de colonnes
                 if (count($row) < 4) {
                     $errors[] = "Ligne {$lineNumber} : données insuffisantes (4 colonnes minimum).";
+
                     continue;
                 }
 
@@ -80,6 +82,7 @@ class ImportStudentsAction extends BaseAction
                 // Valider les champs obligatoires
                 if (empty($firstName) || empty($lastName) || empty($className) || empty($phone1)) {
                     $errors[] = "Ligne {$lineNumber} : champs obligatoires manquants.";
+
                     continue;
                 }
 

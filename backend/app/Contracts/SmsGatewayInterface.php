@@ -19,7 +19,7 @@ interface SmsGatewayInterface
     /**
      * Envoyer un SMS.
      *
-     * @param  string  $phone    Numéro international (ex: +212612345678)
+     * @param  string  $phone  Numéro international (ex: +212612345678)
      * @param  string  $message  Texte du message (générique, sans données perso)
      */
     public function send(string $phone, string $message): void;

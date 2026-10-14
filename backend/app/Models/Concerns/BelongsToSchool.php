@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models\Concerns;
 
+use App\Models\School;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
@@ -34,14 +36,15 @@ trait BelongsToSchool
      */
     public static function bootBelongsToSchool(): void
     {
-        static::addGlobalScope('school', new class implements Scope {
+        static::addGlobalScope('school', new class implements Scope
+        {
             public function apply(Builder $builder, Model $model): void
             {
                 $user = Auth::user();
 
                 if ($user && method_exists($user, 'getSchoolId')) {
                     $builder->where(
-                        $model->getTable() . '.school_id',
+                        $model->getTable().'.school_id',
                         $user->getSchoolId()
                     );
                 }
@@ -61,8 +64,8 @@ trait BelongsToSchool
     /**
      * Relation vers l'école parente.
      */
-    public function school(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function school(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\School::class, 'school_id');
+        return $this->belongsTo(School::class, 'school_id');
     }
 }

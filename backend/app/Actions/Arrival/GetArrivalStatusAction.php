@@ -8,7 +8,6 @@ use App\Actions\BaseAction;
 use App\Models\School;
 use App\Models\User;
 use App\Repositories\Contracts\ArrivalRepositoryInterface;
-use Illuminate\Database\Eloquent\Model;
 
 /**
  * Action métier : Consultation du statut de l'arrivée courante d'un parent (F03 / CA10).

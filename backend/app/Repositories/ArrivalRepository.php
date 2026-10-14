@@ -10,9 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class ArrivalRepository extends BaseRepository implements ArrivalRepositoryInterface
 {
-    /**
-     * @return string
-     */
     protected function getModel(): string
     {
         return Arrival::class;

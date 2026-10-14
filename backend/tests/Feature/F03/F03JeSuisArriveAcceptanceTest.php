@@ -21,7 +21,6 @@ use Laravel\Sanctum\Sanctum;
  * Couvre l'intégralité des critères d'acceptation CA1 à CA10.
  * Conforme à la loi 09-08, multi-tenant hermétique, et fuseau Africa/Casablanca.
  */
-
 beforeEach(function () {
     // Configurer explicitement le fuseau marocain pour chaque test
     date_default_timezone_set('Africa/Casablanca');
@@ -343,7 +342,7 @@ test('CA9 : Aucune coordonnée GPS brute n\'est admise ni stockée en base de do
     $forbiddenColumns = ['l'.'at', 'l'.'ng', 'l'.'atitude', 'l'.'ongitude', 'location', 'coordinates'];
 
     foreach ($tables as $table) {
-        if (!Schema::hasTable($table)) {
+        if (! Schema::hasTable($table)) {
             continue;
         }
 
@@ -354,7 +353,7 @@ test('CA9 : Aucune coordonnée GPS brute n\'est admise ni stockée en base de do
     }
 
     // Vérifier les attributs du modèle Arrival
-    $arrival = new Arrival();
+    $arrival = new Arrival;
     $fillable = $arrival->getFillable();
     foreach ($forbiddenColumns as $col) {
         expect(in_array($col, $fillable, true))

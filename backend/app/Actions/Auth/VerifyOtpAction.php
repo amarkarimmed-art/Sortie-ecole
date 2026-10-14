@@ -35,7 +35,7 @@ class VerifyOtpAction extends BaseAction
         $submittedCode = (string) $data['code'];
 
         // 1. Récupérer l'OTP depuis Redis
-        $cacheKey = 'otp:code:' . $phone;
+        $cacheKey = 'otp:code:'.$phone;
         $storedOtp = Cache::get($cacheKey);
 
         // 2. Vérifier la validité (→ 401 si expiré ou invalide — CA4)
@@ -47,7 +47,7 @@ class VerifyOtpAction extends BaseAction
         Cache::forget($cacheKey);
 
         // 4. Réinitialiser le rate limiter du numéro
-        RateLimiter::clear('otp:' . $phone);
+        RateLimiter::clear('otp:'.$phone);
 
         // 5. Récupérer l'utilisateur
         $user = User::where('phone', $phone)->firstOrFail();
