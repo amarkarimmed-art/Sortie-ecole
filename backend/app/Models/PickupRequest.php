@@ -32,11 +32,28 @@ class PickupRequest extends BaseModel
 
     public const STATUS_EXPIRED = 'expired';
 
+    protected $fillable = [
+        'school_id',
+        'child_id',
+        'requested_by',
+        'arrival_id',
+        'status',
+        'in_radius',
+        'distance_meters',
+        'idempotency_key',
+        'called_by_user_id',
+        'called_at',
+        'departed_by_user_id',
+        'departed_at',
+    ];
+
     protected function casts(): array
     {
         return array_merge(parent::casts(), [
             'in_radius' => 'boolean',
             'distance_meters' => 'integer',
+            'called_at' => 'datetime',
+            'departed_at' => 'datetime',
         ]);
     }
 
@@ -53,5 +70,15 @@ class PickupRequest extends BaseModel
     public function arrival(): BelongsTo
     {
         return $this->belongsTo(Arrival::class);
+    }
+
+    public function appelant(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'called_by_user_id');
+    }
+
+    public function partiPar(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'departed_by_user_id');
     }
 }

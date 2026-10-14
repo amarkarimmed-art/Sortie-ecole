@@ -26,4 +26,19 @@ class UserFactory extends Factory
             'phone_verified_at' => now(),
         ];
     }
+
+    public function surveillant(): static
+    {
+        return $this->state(['role' => 'surveillant']);
+    }
+
+    public function concierge(): static
+    {
+        return $this->state(['role' => 'concierge']);
+    }
+
+    public function director(): static
+    {
+        return $this->state(['role' => 'director']);
+    }
 }

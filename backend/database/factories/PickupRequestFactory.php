@@ -29,4 +29,52 @@ class PickupRequestFactory extends Factory
             'idempotency_key' => (string) Str::uuid(),
         ];
     }
+
+    public function requested(): static
+    {
+        return $this->state([
+            'status' => PickupRequest::STATUS_REQUESTED,
+        ]);
+    }
+
+    public function classNotified(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => PickupRequest::STATUS_CLASS_NOTIFIED,
+            'called_at' => now()->subMinutes(2),
+            'called_by_user_id' => User::factory()->concierge()->state(['school_id' => $attributes['school_id'] ?? School::factory()]),
+        ]);
+    }
+
+    public function onTheWay(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => PickupRequest::STATUS_ON_THE_WAY,
+            'called_at' => now()->subMinutes(5),
+            'called_by_user_id' => User::factory()->concierge()->state(['school_id' => $attributes['school_id'] ?? School::factory()]),
+            'departed_at' => now()->subMinutes(2),
+            'departed_by_user_id' => User::factory()->surveillant()->state(['school_id' => $attributes['school_id'] ?? School::factory()]),
+        ]);
+    }
+
+    public function handedOver(): static
+    {
+        return $this->state([
+            'status' => PickupRequest::STATUS_HANDED_OVER,
+        ]);
+    }
+
+    public function cancelled(): static
+    {
+        return $this->state([
+            'status' => PickupRequest::STATUS_CANCELLED,
+        ]);
+    }
+
+    public function expired(): static
+    {
+        return $this->state([
+            'status' => PickupRequest::STATUS_EXPIRED,
+        ]);
+    }
 }

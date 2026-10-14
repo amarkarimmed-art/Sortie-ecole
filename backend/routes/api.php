@@ -47,5 +47,14 @@ Route::prefix('v1')->group(function () {
 
         Route::post('/schools/{school}/pickup-requests/{requestId}/confirm-presence', [QueueController::class, 'confirmPresence'])
             ->name('queue.confirm-presence');
+
+        // ── F04 : « Téléphone surveillant » ─────────────────────────
+        Route::post('/schools/{school}/pickup-requests/{requestId}/call',
+            fn () => response()->json(['message' => 'Not Implemented'], 501))
+            ->name('queue.call');
+
+        Route::post('/schools/{school}/pickup-requests/{requestId}/depart',
+            fn () => response()->json(['message' => 'Not Implemented'], 501))
+            ->name('queue.depart');
     });
 });
