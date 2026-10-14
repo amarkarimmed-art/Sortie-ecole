@@ -43,23 +43,25 @@ class QueuePolicy extends BasePolicy
 
     /**
      * Vérifier que l'utilisateur peut effectuer une remise (handover).
-     *
-     * SQUELETTE — non implémenté.
      */
     public function handover(User $user, School $school): bool
     {
-        // TODO(F02-CA4): Vérifier le rôle concierge|director ET l'appartenance school_id
-        return false;
+        if ((string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        return in_array($user->role, ['concierge', 'director'], true);
     }
 
     /**
      * Vérifier que l'utilisateur peut confirmer la présence d'un parent hors-rayon.
-     *
-     * SQUELETTE — non implémenté.
      */
     public function confirmPresence(User $user, School $school): bool
     {
-        // TODO(F02-CA4): Vérifier le rôle concierge|director ET l'appartenance school_id
-        return false;
+        if ((string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        return in_array($user->role, ['concierge', 'director'], true);
     }
 }
