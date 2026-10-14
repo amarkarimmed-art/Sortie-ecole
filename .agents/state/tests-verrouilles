@@ -1,27 +1,18 @@
+
+---
 # Registre des Tests d'Acceptation Verrouillés
-
-> Fonctionnalité : **F03 — « Je suis arrivé »**  
-> Date de verrouillage : 2026-10-04  
-> Fuseau de référence : `Africa/Casablanca`  
-> Statut initial : **ROUGE (Échecs valides sur routes 501 / squelette)**  
-> Règle : **Interdiction stricte de modifier ces fichiers de tests durant l'implémentation métier.**
-
----
-
 ## 1. Fichiers et Empreintes Cryptographiques (SHA-256)
-
-| Fichier de test | SHA-256 | Cible |
-| :--- | :--- | :--- |
-| `backend/tests/Feature/F03/F03JeSuisArriveAcceptanceTest.php` | `202d531db7a6f58108838a79a4a049748d8c87eaa199d06805c86bf3e7e22f96` | Backend (Pest / PostgreSQL) |
-| `app_parent/test/features/sortie/presentation/je_suis_arrive_button_test.dart` | `46fa0415e81e8339f6661861aa57555fefdaa9f071dbc2a0dc81ab6d53e97624` | Flutter (Widget / Clock) |
-
----
-
 ## 2. Matrice des Critères d'Acceptation (CA1 à CA11)
-
-| Critère | Description | Comportement attendu | Statut actuel (Phase Rouge) |
+> Date de verrouillage : 2026-10-04  
+> Fonctionnalité : **F03 — « Je suis arrivé »**  
+> Fuseau de référence : `Africa/Casablanca`  
+> Règle : **Interdiction stricte de modifier ces fichiers de tests durant l'implémentation métier.**
+> Statut initial : **ROUGE (Échecs valides sur routes 501 / squelette)**  
+| :--- | :--- | :--- |
 | :--- | :--- | :--- | :--- |
 | **CA1** | Signalement nominal | 201 Created + Arrival + PickupRequests `requested` | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA10** | Consultation statut arrivée | 200 OK avec structure complète de la file | 🔴 Rouge (reçoit 501 Not Implemented) |
+| **CA11** | Bouton « Je suis arrivé » (Flutter) | Bouton inactif hors fenêtre, actif dans fenêtre, support FR/AR | 🔴 Rouge / Test unitaire prêt avec injection `clock.now()` |
 | **CA2** | Rejet hors fenêtre horaire | 422 Unprocessable Content | 🔴 Rouge (reçoit 501 Not Implemented) |
 | **CA3** | Fuseau Africa/Casablanca & Ramadan | 201 en fenêtre Ramadan, 422 hors créneau Ramadan | 🔴 Rouge (reçoit 501 Not Implemented) |
 | **CA4** | Signalement hors rayon (>300m) | 201 + statut `pending_agent_confirmation` + distance arrondie 10m | 🔴 Rouge (reçoit 501 Not Implemented) |
@@ -30,5 +21,10 @@
 | **CA7** | Droits parentaux | Rejet 422/404 si l'élève n'est pas sous la tutelle du parent | 🔴 Rouge (reçoit 501 Not Implemented) |
 | **CA8** | Isolation inter-écoles | Accès école concurrente = **HTTP 404 strict** (jamais 403) | 🔴 Rouge (reçoit 501 Not Implemented) |
 | **CA9** | Zéro persistance coordonnées (Loi 09-08) | 0 colonne lat/lng/latitude/longitude en base | 🔴 Vérifié (schéma respecté, zéro colonne GPS) |
-| **CA10** | Consultation statut arrivée | 200 OK avec structure complète de la file | 🔴 Rouge (reçoit 501 Not Implemented) |
-| **CA11** | Bouton « Je suis arrivé » (Flutter) | Bouton inactif hors fenêtre, actif dans fenêtre, support FR/AR | 🔴 Rouge / Test unitaire prêt avec injection `clock.now()` |
+| `app_parent/test/features/sortie/presentation/je_suis_arrive_button_test.dart` | `46fa0415e81e8339f6661861aa57555fefdaa9f071dbc2a0dc81ab6d53e97624` | Flutter (Widget / Clock) |
+| `backend/tests/Feature/F03/F03JeSuisArriveAcceptanceTest.php` | `202d531db7a6f58108838a79a4a049748d8c87eaa199d06805c86bf3e7e22f96` | Backend (Pest / PostgreSQL) |
+| Critère | Description | Comportement attendu | Statut actuel (Phase Rouge) |
+| Fichier de test | SHA-256 | Cible |
+backend/tests/Feature/F02/CA01F02QueueAccessTest.php
+backend/tests/Feature/F02/CA03F02QueueTriEtDateTest.php
+backend/tests/Feature/F02/CA04F02HandoverIdempotenceTest.php
