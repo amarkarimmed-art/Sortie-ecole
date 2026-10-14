@@ -196,7 +196,7 @@ test('CA3 [rouge] : Les demandes avec statuts terminaux ne figurent PAS dans la 
     $response->assertStatus(200);
 
     // Exactement 4 demandes actives (une par statut actif)
-    $response->assertJsonCount($activeStatuses.count());
+    $response->assertJsonCount(count($activeStatuses));
 
     $ids = collect($response->json())->pluck('id');
 
