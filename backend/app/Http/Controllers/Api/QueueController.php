@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Queue\ListActiveQueueAction;
 use App\Http\Controllers\BaseController;
+use App\Models\PickupRequest;
 use App\Models\School;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Contrôleur de la file d'attente tablette — F02 : Tablette d'accueil.
  *
- * SQUELETTE MINIMAL — Toutes les méthodes retournent HTTP 501 Not Implemented.
- * Aucune logique métier n'est codée ici (Étape 4 TDD — tests rouges).
- * L'implémentation sera effectuée à l'Étape 5 (TDD vert), CA par CA.
- *
- * Chaîne cible : Request → Controller → Action → Service → Repository → Model → DB
+ * Mince et sans logique métier (ADR 0002).
+ * Délègue aux actions dédiées.
  */
 class QueueController extends BaseController
 {
@@ -28,11 +28,12 @@ class QueueController extends BaseController
      * Rôles autorisés : concierge, director.
      * Filtrage : statuts actifs du jour (00:00:00 Africa/Casablanca).
      * Tri : chronologique ascendant (created_at).
-     *
-     * SQUELETTE — retourne 501.
      */
-    public function index(Request $request, School $school): JsonResponse
-    {
+    public function index(
+        Request $request,
+        School $school,
+        ListActiveQueueAction $action
+    ): JsonResponse {
         $user = $request->user();
 
         if ($user && (string) $user->school_id !== (string) $school->id) {
@@ -41,7 +42,24 @@ class QueueController extends BaseController
 
         $this->authorize('viewQueue', $school);
 
-        return response()->json([], 200);
+        $requests = $action->handle($school);
+
+        $items = $requests->map(function (PickupRequest $req) {
+            return [
+                'id' => (string) $req->id,
+                'child_id' => (string) $req->child_id,
+                'child_name' => $req->child->first_name.' '.$req->child->last_name,
+                'class_name' => $req->child->class_name,
+                'status' => $req->status,
+                'waiting_zone' => null,
+                'photo_url' => $req->child->photo_path
+                    ? rescue(fn () => Storage::disk('minio')->temporaryUrl($req->child->photo_path, now()->addMinutes(5)), null, false)
+                    : null,
+                'created_at' => $req->created_at->toIso8601String(),
+            ];
+        });
+
+        return response()->json($items->values()->all(), 200);
     }
 
     /**
