@@ -280,6 +280,29 @@ components:
             $ref: '#/components/schemas/PickupRequestSummary'
       required: [arrival, pickup_requests]
 
+    PickupActionResponse:
+      type: object
+      description: >
+        Réponse après une action de transition sur une PickupRequest
+        (call, depart). Symétrique de ConfirmPresenceResponse.
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID de la PickupRequest mise à jour
+        status:
+          type: string
+          description: Nouveau statut après transition
+          enum:
+            - class_notified
+            - on_the_way
+        updated_at:
+          type: string
+          format: date-time
+          description: Horodatage de la transition en Africa/Casablanca
+      required: [id, status, updated_at]
+
+
 # ─── Paths (F01, F02, F03, F04) ─────────────────────────────────────────────
 paths:
   /auth/login:
@@ -379,7 +402,10 @@ paths:
         Retourne les PickupRequest actives du jour (00:00:00 Africa/Casablanca),
         triées par created_at ascendant. Statuts retournés : requested,
         pending_agent_confirmation, class_notified, on_the_way.
-        Accès restreint aux rôles concierge et director.
+        Accès restreint aux rôles concierge, surveillant et director.
+        Le rôle surveillant reçoit uniquement les demandes au statut
+        class_notified de sa propre école (filtre serveur). Les rôles
+        concierge et director reçoivent la file complète.
       security:
         - sanctum: []
       parameters:
@@ -529,10 +555,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /schools/{schoolId}/pickup-requests/{requestId}/depart:
+  /schools/{schoolId}/pickup-requests/{requestId}/call:
     post:
-      operationId: markDepart
-      summary: Marquer un enfant comme "Parti" par le surveillant (F04)
+      operationId: callClass
+      summary: Appeler la classe d'un enfant (F04)
+      description: >
+        Transition requested → class_notified. Déclenchée par l'agent
+        d'accueil (concierge ou director). Diffuse l'événement Reverb
+        pickup.called sur le canal school.{schoolId}.queue. Idempotent
+        via l'en-tête Idempotency-Key.
       security:
         - sanctum: []
       parameters:
@@ -548,17 +579,105 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUIDv4 généré par le client. Garantit l'idempotence. Obligatoire.
       responses:
         '200':
-          description: Départ enregistré
+          description: Classe appelée — statut mis à jour vers class_notified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupActionResponse'
         '403':
-          description: Non autorisé
+          description: Rôle insuffisant (seuls concierge et director peuvent appeler)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: Requête ou école introuvable
+          description: École ou requête introuvable (isolation multi-tenant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflit d'idempotence (même clé, corps différent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Transition invalide (la demande n'est pas au statut requested)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/pickup-requests/{requestId}/depart:
+    post:
+      operationId: markDepart
+      summary: Marquer un enfant comme « Parti » par le surveillant (F04)
+      description: >
+        Transition class_notified → on_the_way. Déclenchée par le
+        surveillant ou le director. Diffuse l'événement Reverb
+        pickup.departed sur le canal school.{schoolId}.queue. Idempotent
+        via l'en-tête Idempotency-Key. Un second appel avec une clé
+        différente sur une demande déjà on_the_way renvoie 200 (idempotence
+        d'état) ; le 409 est réservé au conflit de clé.
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUIDv4 généré par le client. Garantit l'idempotence. Obligatoire.
+      responses:
+        '200':
+          description: Départ enregistré — statut mis à jour vers on_the_way
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupActionResponse'
+        '403':
+          description: Rôle insuffisant (seuls surveillant et director peuvent libérer)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: École ou requête introuvable (isolation multi-tenant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Conflit d'idempotence (même clé, corps différent)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Transition invalide (la demande n'est pas au statut class_notified)
           content:
             application/json:
               schema:
