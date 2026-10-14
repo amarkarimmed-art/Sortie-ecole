@@ -4,7 +4,19 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\SmsGatewayInterface;
+use App\Models\School;
+use App\Policies\QueuePolicy;
+use App\Repositories\ArrivalRepository;
+use App\Repositories\Contracts\ArrivalRepositoryInterface;
+use App\Repositories\Contracts\PickupRequestRepositoryInterface;
+use App\Repositories\Contracts\PickupWindowRepositoryInterface;
 use App\Repositories\Contracts\RepositoryInterface;
+use App\Repositories\PickupRequestRepository;
+use App\Repositories\PickupWindowRepository;
+use App\Services\Sms\LogSmsGateway;
+use App\Services\Sms\StubSmsGateway;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -30,27 +42,27 @@ class AppServiceProvider extends ServiceProvider
     {
         // ── Repository bindings ─────────────────────────────
         $this->app->bind(
-            \App\Repositories\Contracts\ArrivalRepositoryInterface::class,
-            \App\Repositories\ArrivalRepository::class
+            ArrivalRepositoryInterface::class,
+            ArrivalRepository::class
         );
         $this->app->bind(
-            \App\Repositories\Contracts\PickupRequestRepositoryInterface::class,
-            \App\Repositories\PickupRequestRepository::class
+            PickupRequestRepositoryInterface::class,
+            PickupRequestRepository::class
         );
         $this->app->bind(
-            \App\Repositories\Contracts\PickupWindowRepositoryInterface::class,
-            \App\Repositories\PickupWindowRepository::class
+            PickupWindowRepositoryInterface::class,
+            PickupWindowRepository::class
         );
 
         // ── Service bindings ────────────────────────────────
         $this->app->bind(
-            \App\Contracts\SmsGatewayInterface::class,
+            SmsGatewayInterface::class,
             function () {
                 $driver = env('SMS_DRIVER', 'log');
 
                 return match ($driver) {
-                    'stub' => new \App\Services\Sms\StubSmsGateway(),
-                    default => new \App\Services\Sms\LogSmsGateway(),
+                    'stub' => new StubSmsGateway,
+                    default => new LogSmsGateway,
                 };
             }
         );
@@ -63,5 +75,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Fuseau horaire Africa/Casablanca (jamais de décalage fixe)
         date_default_timezone_set('Africa/Casablanca');
+
+        // Policies
+        Gate::policy(School::class, QueuePolicy::class);
     }
 }
