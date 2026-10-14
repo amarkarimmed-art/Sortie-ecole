@@ -59,3 +59,6 @@ docker-compose.override.yml
 *.log
 *.tmp
 *.bak
+
+# Scripts de debug locaux (jamais commités)
+/backend/public/test.php
