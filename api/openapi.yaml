@@ -68,9 +68,60 @@ components:
           type: object
       required: [token, user]
 
+    QueueItem:
+      type: object
+      description: >
+        Carte d'un enfant dans la file d'attente de la tablette d'accueil (F02).
+        Données minimisées : pas de téléphone, pas de coordonnées GPS (Loi 09-08).
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID de la PickupRequest
+        child_id:
+          type: string
+          format: uuid
+        child_name:
+          type: string
+          description: Prénom et nom de l'élève
+          example: "Yasmine El Fassi"
+        class_name:
+          type: string
+          description: Classe de l'élève
+          example: "CE2-A"
+        status:
+          type: string
+          enum:
+            - requested
+            - pending_agent_confirmation
+            - class_notified
+            - on_the_way
+          description: Statuts actifs uniquement. Les statuts terminaux ne sont jamais retournés.
+        waiting_zone:
+          type: ["string", "null"]
+          description: Zone d'attente physique (ex. "Portail A")
+          example: "Portail A"
+        photo_url:
+          type: ["string", "null"]
+          format: uri
+          description: URL MinIO signée temporaire (durée ≤ 5 minutes). Null si aucune photo.
+        created_at:
+          type: string
+          format: date-time
+          description: Horodatage du signalement d'arrivée (tri chronologique)
+      required:
+        - id
+        - child_id
+        - child_name
+        - class_name
+        - status
+        - created_at
+
     HandoverLog:
       type: object
-      description: Journal de remise en ajout seul (règle 09-08 / sécurité)
+      description: >
+        Journal légal de remise, append-only (trigger PostgreSQL).
+        Conforme à la Loi 09-08 — aucune coordonnée GPS, téléphone masqué.
       properties:
         id:
           type: string
@@ -84,10 +135,67 @@ components:
         agent_id:
           type: string
           format: uuid
+          description: UUID de l'agent d'accueil ayant validé la remise
+        collector_type:
+          type: string
+          enum:
+            - parent
+            - authorized_person
+            - daily_code
+            - pickup_card
+          description: Type de récupérateur de l'enfant
+        parent_user_id:
+          type: ["string", "null"]
+          format: uuid
+          description: UUID opaque du parent titulaire si collector_type = parent
+        authorized_person_id:
+          type: ["string", "null"]
+          format: uuid
+          description: UUID de la personne autorisée si collector_type = authorized_person
         created_at:
           type: string
           format: date-time
-      required: [id, pickup_request_id, school_id, agent_id, created_at]
+      required:
+        - id
+        - pickup_request_id
+        - school_id
+        - agent_id
+        - collector_type
+        - created_at
+
+    HandoverRequest:
+      type: object
+      description: Corps de la requête de remise (POST .../handover)
+      properties:
+        collector_type:
+          type: string
+          enum:
+            - parent
+            - authorized_person
+            - daily_code
+            - pickup_card
+        parent_user_id:
+          type: ["string", "null"]
+          format: uuid
+        authorized_person_id:
+          type: ["string", "null"]
+          format: uuid
+      required:
+        - collector_type
+
+    ConfirmPresenceResponse:
+      type: object
+      description: Réponse après validation manuelle de la présence d'un parent hors rayon
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID de la PickupRequest mise à jour
+        status:
+          type: string
+          enum:
+            - requested
+      required: [id, status]
 
     ArrivalSignalRequest:
       type: object
@@ -267,6 +375,11 @@ paths:
     get:
       operationId: getQueue
       summary: Récupérer la file d'attente de la tablette (F02)
+      description: >
+        Retourne les PickupRequest actives du jour (00:00:00 Africa/Casablanca),
+        triées par created_at ascendant. Statuts retournés : requested,
+        pending_agent_confirmation, class_notified, on_the_way.
+        Accès restreint aux rôles concierge et director.
       security:
         - sanctum: []
       parameters:
@@ -278,21 +391,21 @@ paths:
             format: uuid
       responses:
         '200':
-          description: File d'attente
+          description: File d'attente du jour, triée par heure d'arrivée
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/PickupRequestSummary'
+                  $ref: '#/components/schemas/QueueItem'
         '403':
-          description: Non autorisé
+          description: Non autorisé (rôle insuffisant)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '404':
-          description: École introuvable
+          description: École introuvable (isolation multi-tenant)
           content:
             application/json:
               schema:
@@ -302,6 +415,79 @@ paths:
     post:
       operationId: markHandover
       summary: Marquer un enfant comme "Remis" (F02)
+      description: >
+        Transition vers handed_over autorisée depuis tout statut actif.
+        Écrit une ligne immuable dans handover_logs (append-only).
+        L'en-tête Idempotency-Key est obligatoire pour garantir la
+        cohérence en mode déconnecté (Drift).
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: UUIDv4 généré par la tablette. Garantit l'idempotence. Obligatoire.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandoverRequest'
+      responses:
+        '201':
+          description: Remise enregistrée (ajout au journal)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoverLog'
+        '409':
+          description: Demande déjà remise (handed_over) — idempotent, renvoie le log original
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HandoverLog'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Requête ou école introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Statut déjà terminal (cancelled, expired) ou Idempotency-Key manquante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/pickup-requests/{requestId}/confirm-presence:
+    post:
+      operationId: confirmPresence
+      summary: Valider manuellement la présence d'un parent hors rayon (F02 — CA4)
+      description: >
+        Transition pending_agent_confirmation → requested.
+        Disponible uniquement si le statut courant est pending_agent_confirmation.
+        Accessible uniquement aux rôles concierge et director.
       security:
         - sanctum: []
       parameters:
@@ -318,12 +504,12 @@ paths:
             type: string
             format: uuid
       responses:
-        '201':
-          description: Remise enregistrée (ajout au journal)
+        '200':
+          description: Présence confirmée — statut mis à jour vers requested
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HandoverLog'
+                $ref: '#/components/schemas/ConfirmPresenceResponse'
         '403':
           description: Non autorisé
           content:
@@ -332,6 +518,12 @@ paths:
                 $ref: '#/components/schemas/Error'
         '404':
           description: Requête ou école introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Statut incompatible (la demande n'est pas pending_agent_confirmation)
           content:
             application/json:
               schema:

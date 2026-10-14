@@ -18,39 +18,31 @@ Ce glossaire définit les seuls termes autorisés dans le code, la base de donn�
 
 ---
 
-## Machine à États : `PickupRequest`
+## Machine à états PickupRequest
 
-L'état d'une demande de sortie (`PickupRequest`) suit strictement le graphe de transition ci-dessous. **Toute autre transition est interdite** et doit lever une exception `TransitionInterdite`.
+### Transitions nominales (cycle complet)
+requested                  → class_notified
+class_notified             → on_the_way
+on_the_way                 → handed_over
 
-```
-                    ┌───────────────────────────────┐
-                    │  pending_agent_confirmation   │ (Hors rayon / GPS refusé)
-                    └───────────────┬───────────────┘
-                                    │ (Validation manuelle par agent)
-                                    ▼
-┌──────────────┐             ┌──────────────┐
-│  cancelled   │◄────────────┤  requested   │ (Parent signale son arrivée dans la zone)
-└──────────────┘             └──────┬───────┘
-                                    │ (L'agent du portail valide l'appel)
-                                    ▼
-                             ┌──────────────┐
-                             │class_notified│ (Surveillant reçoit l'alerte de sortie)
-                             └──────┬───────┘
-                                    │ (Le surveillant clique « Parti »)
-                                    ▼
-                             ┌──────────────┐
-                             │  on_the_way  │ (L'élève est en transit vers le portail)
-                             └──────┬───────┘
-                                    │ (L'assistante vérifie et clique « Remis »)
-                                    ▼
-                             ┌──────────────┐
-                             │ handed_over  │ (Sortie actée, enregistrée dans HandoverLog)
-                             └──────────────┘
-```
+### Transitions de raccourci (agent d'accueil)
+L'agent du portail peut remettre un enfant directement depuis n'importe quel statut actif, sans faire le cycle complet :
+requested                  → handed_over
+class_notified             → handed_over
+pending_agent_confirmation → handed_over
 
-*Transitions secondaires de terminaison :*
-* `requested` → `expired` : À la clôture de la fenêtre horaire si non traitée.
-* `requested` → `cancelled` : Annulation explicite par le parent avant prise en charge.
+Ces raccourcis sont tracés dans handover_logs (source_status, à ajouter en F02b si nécessaire).
+
+### Transitions de confirmation
+pending_agent_confirmation → requested
+
+### Transitions de terminaison (hors file)
+requested                  → cancelled
+requested                  → expired
+
+### Transitions INTERDITES (422)
+Toute transition depuis cancelled, expired ou handed_over.
+Toute autre paire non listée ci-dessus.
 
 ---
 
