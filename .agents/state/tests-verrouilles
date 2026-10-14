@@ -4,7 +4,7 @@
 
 | Fichier | SHA-256 | Cible |
 | :--- | :--- | :--- |
-| backend/tests/Feature/F03/F03JeSuisArriveAcceptanceTest.php | 4c223267cd0a95f5c5b787612e662b474607e3b238e57800823cb06e1d9d89c7 | Pest / PostgreSQL |
+| backend/tests/Feature/F03/F03JeSuisArriveAcceptanceTest.php | c50b6cf8b08ec87b629ad875544e237389591820893e0c80f9167d7b77ee5421 | Pest / PostgreSQL |
 | app_parent/test/features/sortie/presentation/je_suis_arrive_button_test.dart | db401860a85a8aff1923e29bd90e4b08720713cb53adfceb346397d82a426423 | Flutter / Clock |
 
 ## F02 — « Tablette d'accueil » (verrouillé le 2026-10-14)
@@ -18,3 +18,4 @@
 ## Exception tracée
 
 - Commit 684de4d : correction d'une erreur de syntaxe PHP dans CA03F02QueueTriEtDateTest.php (count() sur array PHP), après le verrouillage initial. Exception documentée dans la PR F02.
+- Commit 9dad159 (Pint auto-fix) : normalisation de forme sur F03JeSuisArriveAcceptanceTest.php (line_ending CRLF->LF, new_with_parentheses, unary_operator_spaces). Aucun changement sémantique : assertions, noms de tests et valeurs attendues identiques. Suite complète relancée : 37/37 verts, 154 assertions.
