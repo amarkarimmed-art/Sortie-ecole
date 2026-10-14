@@ -87,7 +87,10 @@ passe à on_the_way, l'agent au portail peut remettre. Le micro est supprimé.
        Reverb school.{id}.queue : HTTP 403 sur /broadcasting/auth.
 - CA22 Le rôle surveillant peut appeler GET /queue et reçoit uniquement
        les demandes en class_notified de sa propre école, triées par
-       heure d'appel croissante.
+       called_at ascendant (heure d'appel, pas created_at).
+- CA23 Le payload Reverb de pickup.departed ne contient ni nom complet,
+       ni photo, ni téléphone : uniquement request_id, school_id,
+       child_initial, departed_at. Symétrique de CA13 pour pickup.called.
 
 ## Données personnelles
 
@@ -149,7 +152,7 @@ disparaît de l'écran surveillant. Aucun affichage de on_the_way.
 ### Q8 — Payload de pickup.departed
 Décision : { request_id, school_id, child_initial, departed_at }.
 Symétrique de pickup.called. Pas de class_name (l'enfant a quitté la
-classe).
+classe). Couvert par CA23.
 
 ### Q9 — Destinataires de pickup.departed
 Décision : canal école school.{id}.queue uniquement. La tablette F02
