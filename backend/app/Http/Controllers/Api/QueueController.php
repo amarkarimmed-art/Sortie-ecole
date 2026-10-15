@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Queue\CallClassAction;
 use App\Actions\Queue\ConfirmPresenceAction;
 use App\Actions\Queue\HandoverAction;
 use App\Actions\Queue\ListActiveQueueAction;
@@ -13,6 +14,7 @@ use App\Http\Controllers\BaseController;
 use App\Http\Resources\QueueItemResource;
 use App\Models\PickupRequest;
 use App\Models\School;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -166,6 +168,62 @@ class QueueController extends BaseController
                 'id' => (string) $updated->id,
                 'status' => $updated->status,
                 'message' => 'Présence confirmée avec succès.',
+            ], 200);
+        } catch (HandoverImpossibleException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Appeler une classe pour une demande (F04 — CA1, CA2, CA3, CA10).
+     *
+     * POST /v1/schools/{school}/pickup-requests/{requestId}/call
+     *
+     * Rôles autorisés : concierge, director.
+     * Exige l'en-tête Idempotency-Key (UUIDv4).
+     * Transition vers class_notified.
+     */
+    public function callClass(
+        Request $request,
+        School $school,
+        string $requestId,
+        CallClassAction $action
+    ): JsonResponse {
+        $user = $request->user();
+
+        if ($user && (string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        $this->authorize('call', $school);
+
+        $idempotencyKey = $request->header('Idempotency-Key');
+        if (empty($idempotencyKey)) {
+            return response()->json([
+                'message' => "L'en-tête Idempotency-Key est obligatoire.",
+                'errors' => [
+                    'idempotency_key' => ["L'en-tête Idempotency-Key est obligatoire."],
+                ],
+            ], 422);
+        }
+
+        $pickupRequest = PickupRequest::where('school_id', $school->id)
+            ->where('id', $requestId)
+            ->first();
+
+        if (! $pickupRequest) {
+            abort(404, 'Demande introuvable.');
+        }
+
+        try {
+            $updated = $action->handle($pickupRequest, $user, (string) $idempotencyKey);
+
+            return response()->json([
+                'id' => (string) $updated->id,
+                'status' => $updated->status,
+                'updated_at' => $updated->updated_at?->toISOString() ?? Carbon::now('Africa/Casablanca')->toISOString(),
             ], 200);
         } catch (HandoverImpossibleException $e) {
             return response()->json([

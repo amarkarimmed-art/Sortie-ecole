@@ -64,4 +64,19 @@ class QueuePolicy extends BasePolicy
 
         return in_array($user->role, ['concierge', 'director'], true);
     }
+
+    /**
+     * Vérifier que l'utilisateur peut appeler une classe (call).
+     *
+     * Rôles autorisés : concierge, director.
+     * Tout autre rôle (parent, surveillant) reçoit HTTP 403.
+     */
+    public function call(User $user, School $school): bool
+    {
+        if ((string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        return in_array($user->role, ['concierge', 'director'], true);
+    }
 }
