@@ -36,7 +36,7 @@
 
 - Commit 684de4d : correction d'une erreur de syntaxe PHP dans CA03F02QueueTriEtDateTest.php (count() sur array PHP), après le verrouillage initial. Exception documentée dans la PR F02.
 - Commit 9dad159 (Pint auto-fix) : normalisation de forme sur F03JeSuisArriveAcceptanceTest.php (line_ending CRLF->LF, new_with_parentheses, unary_operator_spaces). Aucun changement sémantique : assertions, noms de tests et valeurs attendues identiques. Suite complète relancée : 37/37 verts, 154 assertions.
-- Commit <SHA_COMMIT_COURANT> (correction CA13) : ajout du type hint
+- Commit 9606ba1 (correction CA13) : ajout du type hint
   PickupRequestCalled::class en 1er argument de Event::assertDispatched
   dans CA13F04PayloadCalledTest.php. Correction mécanique d'un bug
   Laravel (ReflectsClosures::firstClosureParameterType exige un type

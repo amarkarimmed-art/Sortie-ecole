@@ -52,8 +52,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/schools/{school}/pickup-requests/{requestId}/call', [QueueController::class, 'callClass'])
             ->name('queue.call');
 
-        Route::post('/schools/{school}/pickup-requests/{requestId}/depart',
-            fn () => response()->json(['message' => 'Not Implemented'], 501))
+        Route::post('/schools/{school}/pickup-requests/{requestId}/depart', [QueueController::class, 'markDepart'])
             ->name('queue.depart');
     });
 });

@@ -8,6 +8,7 @@ use App\Actions\Queue\CallClassAction;
 use App\Actions\Queue\ConfirmPresenceAction;
 use App\Actions\Queue\HandoverAction;
 use App\Actions\Queue\ListActiveQueueAction;
+use App\Actions\Queue\MarkDepartAction;
 use App\Exceptions\Queue\HandoverDejaEnregistreException;
 use App\Exceptions\Queue\HandoverImpossibleException;
 use App\Http\Controllers\BaseController;
@@ -198,6 +199,62 @@ class QueueController extends BaseController
         }
 
         $this->authorize('call', $school);
+
+        $idempotencyKey = $request->header('Idempotency-Key');
+        if (empty($idempotencyKey)) {
+            return response()->json([
+                'message' => "L'en-tête Idempotency-Key est obligatoire.",
+                'errors' => [
+                    'idempotency_key' => ["L'en-tête Idempotency-Key est obligatoire."],
+                ],
+            ], 422);
+        }
+
+        $pickupRequest = PickupRequest::where('school_id', $school->id)
+            ->where('id', $requestId)
+            ->first();
+
+        if (! $pickupRequest) {
+            abort(404, 'Demande introuvable.');
+        }
+
+        try {
+            $updated = $action->handle($pickupRequest, $user, (string) $idempotencyKey);
+
+            return response()->json([
+                'id' => (string) $updated->id,
+                'status' => $updated->status,
+                'updated_at' => $updated->updated_at?->toISOString() ?? Carbon::now('Africa/Casablanca')->toISOString(),
+            ], 200);
+        } catch (HandoverImpossibleException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Marquer le départ d'une demande de sortie (F04 — CA4, CA5, CA6, CA19).
+     *
+     * POST /v1/schools/{school}/pickup-requests/{requestId}/depart
+     *
+     * Rôles autorisés : surveillant, director.
+     * Exige l'en-tête Idempotency-Key (UUIDv4).
+     * Transition vers on_the_way depuis class_notified.
+     */
+    public function markDepart(
+        Request $request,
+        School $school,
+        string $requestId,
+        MarkDepartAction $action
+    ): JsonResponse {
+        $user = $request->user();
+
+        if ($user && (string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        $this->authorize('depart', $school);
 
         $idempotencyKey = $request->header('Idempotency-Key');
         if (empty($idempotencyKey)) {

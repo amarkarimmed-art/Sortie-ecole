@@ -79,4 +79,19 @@ class QueuePolicy extends BasePolicy
 
         return in_array($user->role, ['concierge', 'director'], true);
     }
+
+    /**
+     * Vérifier que l'utilisateur peut marquer le départ d'un élève (depart).
+     *
+     * Rôles autorisés : surveillant, director.
+     * Tout autre rôle (concierge, parent) reçoit HTTP 403.
+     */
+    public function depart(User $user, School $school): bool
+    {
+        if ((string) $user->school_id !== (string) $school->id) {
+            abort(404, 'École introuvable.');
+        }
+
+        return in_array($user->role, ['surveillant', 'director'], true);
+    }
 }
