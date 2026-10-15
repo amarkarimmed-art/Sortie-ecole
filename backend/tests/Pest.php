@@ -60,4 +60,3 @@ function markDepart(School $school, PickupRequest $request, ?string $key = null)
     return test()->withHeader('Idempotency-Key', $key)
         ->postJson("/api/v1/schools/{$schoolId}/pickup-requests/{$requestId}/depart");
 }
-

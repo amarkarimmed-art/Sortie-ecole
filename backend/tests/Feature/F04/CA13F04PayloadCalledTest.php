@@ -7,7 +7,6 @@ namespace Tests\Feature\F04;
 use App\Models\Child;
 use App\Models\PickupRequest;
 use App\Models\School;
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Event;
 
