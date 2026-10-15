@@ -15,14 +15,13 @@
 |
 */
 
+use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('school.{schoolId}.queue', function ($user, string $schoolId) {
-    // Vérification stricte : l'utilisateur authentifié doit
-    // appartenir à l'école demandée.
-    if (! method_exists($user, 'getSchoolId')) {
-        return false;
-    }
+Broadcast::channel('school.{schoolId}.queue', function (User $user, string $schoolId) {
+    $rolesAutorises = ['concierge', 'surveillant', 'director'];
 
-    return $user->getSchoolId() === $schoolId;
+    return in_array($user->role, $rolesAutorises, true)
+        && method_exists($user, 'getSchoolId')
+        && $user->getSchoolId() === $schoolId;
 });
