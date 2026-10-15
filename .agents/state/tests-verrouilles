@@ -15,6 +15,23 @@
 | backend/tests/Feature/F02/CA03F02QueueTriEtDateTest.php | a8c7f5d5de4fd04f9fe3b32d0cac2f1745369bc5ba4543ffd55b3c4e19b291a5 | Pest / PostgreSQL |
 | backend/tests/Feature/F02/CA04F02HandoverIdempotenceTest.php | 3caca64d93aea6bdd17df21dbc8be332faf129aac49c7f67d9c07e84b9c8f8ab | Pest / PostgreSQL |
 
+## F04 — « Téléphone surveillant » (verrouillé le 2026-10-15)
+
+| Fichier | SHA-256 | Cible |
+| :--- | :--- | :--- |
+| backend/tests/Feature/F04/CA01F04CallClassTest.php | 8d733124795acc7f5a8360e494e5a79653d753685260c4208540e84cebcd60f1 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA02F04MarkDepartTest.php | 821e4eacb8b0626e221d424e617119c7d0d0ac4fc6d3d694871f656ed7b08c96 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA03F04QueueSurveillantTest.php | 468bdfbbeb3c0a9a1e1322a8faab2662a46eceea5094f2330a7e7d92e3544e07 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA05F04ConcurrencyLockTest.php | 09d3aca02833f356fdc640ecf0ae6f710dbfc03986fc745837ac5eea4901780a | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | 093cc6327ed9362c190bb71dc7ac2f3dd801e196d44f2c1ec5136ca33d5986a2 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA16F04IsolationTest.php | 7e2552b536ac4c38b4af5f96eac1d783b3feff74d993fa251cd583b8013d37fd | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA17F04ConfidentialiteTest.php | 4dd2a3c22f1b0a6bb79060e71fb4487c981b362df8a31b73295463ce49c33b2a | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA21F04BroadcastingAuthTest.php | 7d0773c56ab88c9390811faef985d6522d97acd3862e95ddf3ad6734543fc84e | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA23F04ConfidentialiteDepartTest.php | bacf3776aab42edd25b658ce174adefdbf7ff59cad351b209f9779a243c02741 | Pest / PostgreSQL |
+| app_ecole/test/features/surveillance/ca11_ecran_surveillant_tri_et_groupement_test.dart | 7ca9bca0379d949eac89c25f3971c3c13b2530223eac87adb6c18e9f39945922 | Flutter / Test |
+| app_ecole/test/features/surveillance/ca14_maj_temps_reel_events_test.dart | 5da8656d943931c66b72305193970610035c28713c4506a068a4a42d1f4d8205 | Flutter / Test |
+| app_ecole/test/features/surveillance/ca15_reconnexion_ws_recharge_queue_test.dart | d97eee5e23098fccf296ad2e3c4ed3327701f9ee86a8a6f98e5a9fa8199de4e6 | Flutter / Test |
+
 ## Exception tracée
 
 - Commit 684de4d : correction d'une erreur de syntaxe PHP dans CA03F02QueueTriEtDateTest.php (count() sur array PHP), après le verrouillage initial. Exception documentée dans la PR F02.
