@@ -65,6 +65,7 @@ class CallClassAction
                 'called_at' => $now,
             ]);
 
+            $locked->load('child');
             PickupRequestCalled::dispatch($locked);
 
             return $locked;

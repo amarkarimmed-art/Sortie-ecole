@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\F04;
 
+use App\Events\PickupRequestCalled;
 use App\Models\Child;
 use App\Models\PickupRequest;
 use App\Models\School;
@@ -41,7 +42,7 @@ test('CA13 : le payload de pickup.called respecte la structure autorisée (reque
     $response->assertStatus(200);
 
     // Une fois implémenté, vérifier la structure exacte et l'absence de données personnelles
-    Event::assertDispatched(function ($event) use ($request, $school) {
+    Event::assertDispatched(PickupRequestCalled::class, function ($event) use ($request, $school) {
         $name = is_string($event) ? $event : ($event->broadcastAs() ?? get_class($event));
         if (! str_contains((string) $name, 'called')) {
             return false;

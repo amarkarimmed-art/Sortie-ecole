@@ -23,7 +23,7 @@
 | backend/tests/Feature/F04/CA02F04MarkDepartTest.php | 821e4eacb8b0626e221d424e617119c7d0d0ac4fc6d3d694871f656ed7b08c96 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA03F04QueueSurveillantTest.php | 468bdfbbeb3c0a9a1e1322a8faab2662a46eceea5094f2330a7e7d92e3544e07 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA05F04ConcurrencyLockTest.php | 09d3aca02833f356fdc640ecf0ae6f710dbfc03986fc745837ac5eea4901780a | Pest / PostgreSQL |
-| backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | 093cc6327ed9362c190bb71dc7ac2f3dd801e196d44f2c1ec5136ca33d5986a2 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | 13698b27633654cad1e4bd77ab376fd754f5a94e67dd924b5c175655b807df1a | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA16F04IsolationTest.php | 7e2552b536ac4c38b4af5f96eac1d783b3feff74d993fa251cd583b8013d37fd | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA17F04ConfidentialiteTest.php | 4dd2a3c22f1b0a6bb79060e71fb4487c981b362df8a31b73295463ce49c33b2a | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA21F04BroadcastingAuthTest.php | 7d0773c56ab88c9390811faef985d6522d97acd3862e95ddf3ad6734543fc84e | Pest / PostgreSQL |
@@ -36,3 +36,9 @@
 
 - Commit 684de4d : correction d'une erreur de syntaxe PHP dans CA03F02QueueTriEtDateTest.php (count() sur array PHP), après le verrouillage initial. Exception documentée dans la PR F02.
 - Commit 9dad159 (Pint auto-fix) : normalisation de forme sur F03JeSuisArriveAcceptanceTest.php (line_ending CRLF->LF, new_with_parentheses, unary_operator_spaces). Aucun changement sémantique : assertions, noms de tests et valeurs attendues identiques. Suite complète relancée : 37/37 verts, 154 assertions.
+- Commit <SHA_COMMIT_COURANT> (correction CA13) : ajout du type hint
+  PickupRequestCalled::class en 1er argument de Event::assertDispatched
+  dans CA13F04PayloadCalledTest.php. Correction mécanique d'un bug
+  Laravel (ReflectsClosures::firstClosureParameterType exige un type
+  hint ou une classe explicite). Assertions métier inchangées.
+
