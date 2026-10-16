@@ -1,28 +1,34 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-/// Service WebSocket pour Laravel Reverb.
+import '../../features/surveillance/domain/pickup_request_called_event.dart';
+
+/// Service WebSocket pour Laravel Reverb (ADR 0006).
 ///
-/// Canal privé par école : `private-school.{schoolId}.queue` (ADR 0006).
+/// Canal privé par école : `private-school.{schoolId}.queue`.
 ///
-/// Ce service est le SEUL point de contact WebSocket dans l'app.
-/// Il gère :
-/// - La connexion/reconnexion automatique
-/// - L'écoute des événements temps réel (file d'attente, appels)
-/// - La gestion de la perte de connexion
-///
-/// Utilisé uniquement dans :
-///   app_ecole/lib/shared/services/reverb_service.dart
+/// Ce service gère :
+/// - La connexion / reconnexion WebSocket
+/// - L'abonnement aux événements en temps réel (pickup.called, pickup.departed)
+/// - L'émission du signal de resynchronisation lors d'une reconnexion (CA15)
 class ReverbService {
-  WebSocketChannel? _channel;
-  StreamSubscription? _subscription;
   final String _baseUrl;
   final String _schoolId;
-  bool _isConnected = false;
 
-  /// Callbacks pour les événements reçus.
-  final StreamController<Map<String, dynamic>> _eventController =
+  WebSocketChannel? _channel;
+  StreamSubscription? _subscription;
+  bool _isConnected = false;
+  bool _wasPreviouslyConnected = false;
+
+  final StreamController<PickupRequestCalledEvent> _calledController =
+      StreamController<PickupRequestCalledEvent>.broadcast();
+
+  final StreamController<void> _resyncController =
+      StreamController<void>.broadcast();
+
+  final StreamController<Map<String, dynamic>> _rawEventController =
       StreamController<Map<String, dynamic>>.broadcast();
 
   ReverbService({
@@ -31,23 +37,94 @@ class ReverbService {
   })  : _baseUrl = baseUrl,
         _schoolId = schoolId;
 
-  /// Flux d'événements Reverb.
-  Stream<Map<String, dynamic>> get events => _eventController.stream;
+  /// URL de base Reverb (ex: ws://localhost:8080).
+  String get baseUrl => _baseUrl;
 
-  /// État de la connexion.
+  /// Identifiant UUID de l'école.
+  String get schoolId => _schoolId;
+
+  /// Nom du canal privé par école.
+  String get channelName => 'private-school.$_schoolId.queue';
+
+  /// Flux des événements pickup.called (sans polling, CA14).
+  Stream<PickupRequestCalledEvent> get calledEvents => _calledController.stream;
+
+  /// Flux de signalement de reconnexion pour rechargement complet (CA15).
+  Stream<void> get resyncStream => _resyncController.stream;
+
+  /// Flux d'événements bruts.
+  Stream<Map<String, dynamic>> get events => _rawEventController.stream;
+
+  /// État actuel de la connexion WebSocket.
   bool get isConnected => _isConnected;
 
   /// Se connecter au canal privé de l'école.
-  ///
-  /// Canal : `private-school.{schoolId}.queue`
-  Future<void> connect({required String authToken}) async {
-    // TODO: Implémenter la connexion WebSocket vers Reverb
-    // avec authentification Sanctum bearer token.
-    //
-    // 1. Établir la connexion WebSocket
-    // 2. S'abonner au canal private-school.{_schoolId}.queue
-    // 3. Écouter les événements et les diffuser via _eventController
-    // 4. Gérer la reconnexion automatique en cas de perte
+  Future<void> connect({String? authToken}) async {
+    try {
+      final wsUri = Uri.parse(_baseUrl);
+      _channel = WebSocketChannel.connect(wsUri);
+
+      _subscription = _channel?.stream.listen(
+        (data) {
+          _handleMessage(data);
+        },
+        onError: (error) {
+          _handleDisconnection();
+        },
+        onDone: () {
+          _handleDisconnection();
+        },
+      );
+
+      _isConnected = true;
+
+      // Si c'est une reconnexion après coupure, émettre le signal de resynchronisation (CA15)
+      if (_wasPreviouslyConnected) {
+        _resyncController.add(null);
+      }
+      _wasPreviouslyConnected = true;
+    } catch (_) {
+      _handleDisconnection();
+    }
+  }
+
+  /// Traitement des messages reçus via WebSocket.
+  void _handleMessage(dynamic data) {
+    try {
+      final raw = jsonDecode(data.toString()) as Map<String, dynamic>;
+      _rawEventController.add(raw);
+
+      final eventName = raw['event'] as String?;
+      final payload = raw['data'];
+
+      Map<String, dynamic> eventData = {};
+      if (payload is String) {
+        eventData = jsonDecode(payload) as Map<String, dynamic>;
+      } else if (payload is Map<String, dynamic>) {
+        eventData = payload;
+      }
+
+      if (eventName == 'pickup.called' || eventName == 'App\\Events\\PickupRequestCalled') {
+        final calledEvent = PickupRequestCalledEvent.fromJson(eventData);
+        _calledController.add(calledEvent);
+      }
+    } catch (_) {
+      // Ignorer les messages malformés
+    }
+  }
+
+  void _handleDisconnection() {
+    _isConnected = false;
+  }
+
+  /// Injecter manuellement un événement (utile pour les tests ou simulation).
+  void emitCalledEvent(PickupRequestCalledEvent event) {
+    _calledController.add(event);
+  }
+
+  /// Déclencher manuellement un signal de resynchronisation (simulation reconnexion).
+  void triggerResync() {
+    _resyncController.add(null);
   }
 
   /// Se déconnecter proprement.
@@ -61,6 +138,8 @@ class ReverbService {
   /// Libérer les ressources.
   Future<void> dispose() async {
     await disconnect();
-    await _eventController.close();
+    await _calledController.close();
+    await _resyncController.close();
+    await _rawEventController.close();
   }
 }

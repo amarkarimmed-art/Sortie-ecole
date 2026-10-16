@@ -1,0 +1,45 @@
+{
+  "@@locale": "ar",
+  "ecranSurveillanceTitre": "مراقبة مغادرة التلاميذ",
+  "@ecranSurveillanceTitre": {
+    "description": "Titre écran surveillance — à valider par un natif"
+  },
+  "chargementFile": "جاري تحميل القائمة...",
+  "@chargementFile": {
+    "description": "Message de chargement — à valider par un natif"
+  },
+  "aucunEleveAppele": "لا يوجد تلاميذ تم النداء عليهم حالياً",
+  "@aucunEleveAppele": {
+    "description": "Message liste vide — à valider par un natif"
+  },
+  "reessayer": "إعادة المحاولة",
+  "@reessayer": {
+    "description": "Bouton réessayer — à valider par un natif"
+  },
+  "erreurChargement": "حدث خطأ أثناء تحميل القائمة",
+  "@erreurChargement": {
+    "description": "Erreur chargement — à valider par un natif"
+  },
+  "classeTitre": "قسم {className}",
+  "@classeTitre": {
+    "description": "En-tête de classe — à valider par un natif",
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "heureAppel": "تم النداء في {time}",
+  "@heureAppel": {
+    "description": "Heure d'appel — à valider par un natif",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnexionReussie": "تمت إعادة الاتصال وتحديث القائمة",
+  "@reconnexionReussie": {
+    "description": "Message resynchronisation — à valider par un natif"
+  }
+}

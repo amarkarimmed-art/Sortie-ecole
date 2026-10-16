@@ -28,9 +28,9 @@
 | backend/tests/Feature/F04/CA17F04ConfidentialiteTest.php | 4dd2a3c22f1b0a6bb79060e71fb4487c981b362df8a31b73295463ce49c33b2a | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA21F04BroadcastingAuthTest.php | 7d0773c56ab88c9390811faef985d6522d97acd3862e95ddf3ad6734543fc84e | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA23F04ConfidentialiteDepartTest.php | bacf3776aab42edd25b658ce174adefdbf7ff59cad351b209f9779a243c02741 | Pest / PostgreSQL |
-| app_ecole/test/features/surveillance/ca11_ecran_surveillant_tri_et_groupement_test.dart | 7ca9bca0379d949eac89c25f3971c3c13b2530223eac87adb6c18e9f39945922 | Flutter / Test |
-| app_ecole/test/features/surveillance/ca14_maj_temps_reel_events_test.dart | 5da8656d943931c66b72305193970610035c28713c4506a068a4a42d1f4d8205 | Flutter / Test |
-| app_ecole/test/features/surveillance/ca15_reconnexion_ws_recharge_queue_test.dart | d97eee5e23098fccf296ad2e3c4ed3327701f9ee86a8a6f98e5a9fa8199de4e6 | Flutter / Test |
+| app_ecole/test/features/surveillance/ca11_ecran_surveillant_tri_et_groupement_test.dart | 97ea75feee67e7d5bdeae48ccd7eae5added0e17dda92a1f33babe03511852d6 | Flutter / Test |
+| app_ecole/test/features/surveillance/ca14_maj_temps_reel_events_test.dart | b553eb8bbff66304bbca8706c75b101e1a1569612bdcf683a31ddbe522381d8f | Flutter / Test |
+| app_ecole/test/features/surveillance/ca15_reconnexion_ws_recharge_queue_test.dart | 92a04c1c36495362d1444b2b2e88f1729f90b420a419e9780b09b6d7f0a847c8 | Flutter / Test |
 
 ## Exception tracée
 
@@ -51,5 +51,15 @@
   le surveillant ne voit QUE les class_notified de sa propre école.
   Aucun autre test F02 modifié (CA1-a, CA1-c, CA1-d, CA1-e, CA2, CA3,
   CA4 restent inchangés).
+- Commit 45e0815 (réécriture des 3 tests Dart F04) :
+  remplacement des squelettes placeholders par des tests widget montant
+  SurveillanceScreen. Motif : les tests initiaux (bloc 5) montaient un
+  Scaffold contenant un Text('Placeholder') et vérifiaient ensuite la
+  présence de clés absentes de ce placeholder — assertion impossible à
+  satisfaire. Nouveaux tests : montage du vrai widget et vérification
+  des 3 clés (ecran_surveillance, ecran_surveillance_stream,
+  ecran_surveillance_resync). Aucune modification fonctionnelle du code
+  de production.
+
 
 

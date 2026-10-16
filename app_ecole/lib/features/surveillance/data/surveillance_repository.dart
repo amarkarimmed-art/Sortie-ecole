@@ -1,0 +1,145 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart';
+
+import '../../../shared/services/reverb_service.dart';
+import '../domain/pickup_request_called_event.dart';
+import '../domain/surveillance_item.dart';
+import '../domain/surveillance_state.dart';
+
+/// Repository pour l'écran de surveillance (CA11, CA14, CA15).
+///
+/// Combine les appels REST (GET /queue) et le temps réel WebSocket (Reverb).
+class SurveillanceRepository {
+  final Dio? _dio;
+  final String _baseUrl;
+  final String _schoolId;
+  final ReverbService _reverbService;
+
+  final StreamController<SurveillanceState> _stateController =
+      StreamController<SurveillanceState>.broadcast();
+
+  final List<SurveillanceItem> _currentItems = [];
+  StreamSubscription<PickupRequestCalledEvent>? _calledSubscription;
+  StreamSubscription<void>? _resyncSubscription;
+
+  SurveillanceRepository({
+    Dio? dio,
+    required String baseUrl,
+    required String schoolId,
+    required ReverbService reverbService,
+  })  : _dio = dio,
+        _baseUrl = baseUrl,
+        _schoolId = schoolId,
+        _reverbService = reverbService;
+
+  Stream<SurveillanceState> get state => _stateController.stream;
+  List<SurveillanceItem> get currentItems => List.unmodifiable(_currentItems);
+  ReverbService get reverbService => _reverbService;
+
+  void init() {
+    // Écouter les événements temps réel pickup.called sans polling (CA14)
+    _calledSubscription = _reverbService.calledEvents.listen((event) {
+      _handleCalledEvent(event);
+    });
+
+    // Écouter les reconnexions WebSocket pour recharger l'état complet (CA15)
+    _resyncSubscription = _reverbService.resyncStream.listen((_) {
+      reloadFromQueue(isResync: true);
+    });
+  }
+
+  /// Charger la file d'attente initiale depuis GET /schools/{schoolId}/queue.
+  Future<void> loadInitialQueue({String? token}) async {
+    _stateController.add(const SurveillanceLoading());
+    await reloadFromQueue(token: token);
+  }
+
+  /// Recharger l'état complet depuis GET /queue (CA15).
+  Future<void> reloadFromQueue({String? token, bool isResync = false}) async {
+    try {
+      if (isResync && _currentItems.isNotEmpty) {
+        _stateController.add(SurveillanceLoaded(
+          items: List.from(_currentItems),
+          isResyncing: true,
+        ));
+      }
+
+      if (_dio != null) {
+        final headers = <String, dynamic>{
+          'Accept': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        };
+
+        final response = await _dio.get(
+          '$_baseUrl/api/v1/schools/$_schoolId/queue',
+          options: Options(headers: headers),
+        );
+
+        if (response.statusCode == 200 && response.data is List) {
+          final list = response.data as List;
+          _currentItems.clear();
+          for (final raw in list) {
+            if (raw is Map<String, dynamic>) {
+              final item = SurveillanceItem.fromJson(raw);
+              if (item.status == 'class_notified') {
+                _currentItems.add(item);
+              }
+            }
+          }
+        }
+      }
+
+      _stateController.add(SurveillanceLoaded(
+        items: List.from(_currentItems),
+        isResyncing: false,
+      ));
+    } catch (e) {
+      if (_currentItems.isEmpty) {
+        _stateController.add(SurveillanceError(e.toString()));
+      } else {
+        // En cas d'erreur lors d'une resynchronisation, conserver l'état existant
+        _stateController.add(SurveillanceLoaded(
+          items: List.from(_currentItems),
+          isResyncing: false,
+        ));
+      }
+    }
+  }
+
+  void _handleCalledEvent(PickupRequestCalledEvent event) {
+    // Ne retenir que les événements de la même école
+    if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
+      return;
+    }
+
+    final index = _currentItems.indexWhere((i) => i.requestId == event.requestId);
+    if (index >= 0) {
+      // Déjà présent
+      return;
+    }
+
+    final newItem = SurveillanceItem.fromCalledEvent(event);
+    _currentItems.add(newItem);
+
+    _stateController.add(SurveillanceLoaded(
+      items: List.from(_currentItems),
+      isResyncing: false,
+    ));
+  }
+
+  /// Ajouter directement un item (pour tests).
+  void addItemForTesting(SurveillanceItem item) {
+    _currentItems.add(item);
+    _stateController.add(SurveillanceLoaded(
+      items: List.from(_currentItems),
+      isResyncing: false,
+    ));
+  }
+
+  void dispose() {
+    _calledSubscription?.cancel();
+    _resyncSubscription?.cancel();
+    _stateController.close();
+  }
+}

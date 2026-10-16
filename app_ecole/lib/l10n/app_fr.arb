@@ -1,0 +1,25 @@
+{
+  "@@locale": "fr",
+  "ecranSurveillanceTitre": "Surveillance des sorties",
+  "chargementFile": "Chargement de la file...",
+  "aucunEleveAppele": "Aucun élève appelé pour le moment",
+  "reessayer": "Réessayer",
+  "erreurChargement": "Erreur lors du chargement de la file",
+  "classeTitre": "Classe {className}",
+  "@classeTitre": {
+    "placeholders": {
+      "className": {
+        "type": "String"
+      }
+    }
+  },
+  "heureAppel": "Appelé à {time}",
+  "@heureAppel": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "reconnexionReussie": "Reconnexion réussie — file resynchronisée"
+}
