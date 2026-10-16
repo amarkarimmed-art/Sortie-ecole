@@ -23,6 +23,8 @@ class SurveillanceItem extends Equatable {
     required this.status,
   });
 
+  String get id => requestId;
+
   factory SurveillanceItem.fromJson(Map<String, dynamic> json) {
     final rawName = json['child_name'] as String? ?? '';
     final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';

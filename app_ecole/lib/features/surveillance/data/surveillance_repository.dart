@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 
 import '../../../shared/services/reverb_service.dart';
 import '../domain/pickup_request_called_event.dart';
+import '../domain/pickup_request_departed_event.dart';
 import '../domain/surveillance_item.dart';
 import '../domain/surveillance_state.dart';
 
@@ -21,6 +22,7 @@ class SurveillanceRepository {
 
   final List<SurveillanceItem> _currentItems = [];
   StreamSubscription<PickupRequestCalledEvent>? _calledSubscription;
+  StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
   StreamSubscription<void>? _resyncSubscription;
 
   SurveillanceRepository({
@@ -41,6 +43,11 @@ class SurveillanceRepository {
     // Écouter les événements temps réel pickup.called sans polling (CA14)
     _calledSubscription = _reverbService.calledEvents.listen((event) {
       _handleCalledEvent(event);
+    });
+
+    // Écouter les départs pour retirer les élèves de la liste locale (B4)
+    _departedSubscription = _reverbService.departedEvents.listen((event) {
+      _handleDepartedEvent(event);
     });
 
     // Écouter les reconnexions WebSocket pour recharger l'état complet (CA15)
@@ -128,6 +135,22 @@ class SurveillanceRepository {
     ));
   }
 
+  void _handleDepartedEvent(PickupRequestDepartedEvent event) {
+    // Ne retenir que les événements de la même école
+    if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
+      return;
+    }
+
+    final index = _currentItems.indexWhere((i) => i.requestId == event.requestId);
+    if (index >= 0) {
+      _currentItems.removeAt(index);
+      _stateController.add(SurveillanceLoaded(
+        items: List.from(_currentItems),
+        isResyncing: false,
+      ));
+    }
+  }
+
   /// Ajouter directement un item (pour tests).
   void addItemForTesting(SurveillanceItem item) {
     _currentItems.add(item);
@@ -139,6 +162,7 @@ class SurveillanceRepository {
 
   void dispose() {
     _calledSubscription?.cancel();
+    _departedSubscription?.cancel();
     _resyncSubscription?.cancel();
     _stateController.close();
   }

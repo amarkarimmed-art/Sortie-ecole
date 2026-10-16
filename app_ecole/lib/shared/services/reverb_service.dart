@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../features/surveillance/domain/pickup_request_called_event.dart';
+import '../../features/surveillance/domain/pickup_request_departed_event.dart';
 
 /// Service WebSocket pour Laravel Reverb (ADR 0006).
 ///
@@ -24,6 +25,9 @@ class ReverbService {
 
   final StreamController<PickupRequestCalledEvent> _calledController =
       StreamController<PickupRequestCalledEvent>.broadcast();
+
+  final StreamController<PickupRequestDepartedEvent> _departedController =
+      StreamController<PickupRequestDepartedEvent>.broadcast();
 
   final StreamController<void> _resyncController =
       StreamController<void>.broadcast();
@@ -48,6 +52,10 @@ class ReverbService {
 
   /// Flux des événements pickup.called (sans polling, CA14).
   Stream<PickupRequestCalledEvent> get calledEvents => _calledController.stream;
+
+  /// Flux des événements pickup.departed (B4).
+  Stream<PickupRequestDepartedEvent> get departedEvents =>
+      _departedController.stream;
 
   /// Flux de signalement de reconnexion pour rechargement complet (CA15).
   Stream<void> get resyncStream => _resyncController.stream;
@@ -107,6 +115,10 @@ class ReverbService {
       if (eventName == 'pickup.called' || eventName == 'App\\Events\\PickupRequestCalled') {
         final calledEvent = PickupRequestCalledEvent.fromJson(eventData);
         _calledController.add(calledEvent);
+      } else if (eventName == 'pickup.departed' ||
+          eventName == 'App\\Events\\PickupRequestDeparted') {
+        final departedEvent = PickupRequestDepartedEvent.fromJson(eventData);
+        _departedController.add(departedEvent);
       }
     } catch (_) {
       // Ignorer les messages malformés
@@ -120,6 +132,11 @@ class ReverbService {
   /// Injecter manuellement un événement (utile pour les tests ou simulation).
   void emitCalledEvent(PickupRequestCalledEvent event) {
     _calledController.add(event);
+  }
+
+  /// Injecter manuellement un événement de départ (utile pour les tests ou simulation).
+  void emitDepartedEvent(PickupRequestDepartedEvent event) {
+    _departedController.add(event);
   }
 
   /// Déclencher manuellement un signal de resynchronisation (simulation reconnexion).
@@ -139,6 +156,7 @@ class ReverbService {
   Future<void> dispose() async {
     await disconnect();
     await _calledController.close();
+    await _departedController.close();
     await _resyncController.close();
     await _rawEventController.close();
   }
