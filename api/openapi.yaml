@@ -109,6 +109,10 @@ components:
           type: string
           format: date-time
           description: Horodatage du signalement d'arrivée (tri chronologique)
+        called_at:
+          type: ["string", "null"]
+          format: date-time
+          description: Horodatage de l'appel de la classe (Africa/Casablanca). Null si non encore appelé.
       required:
         - id
         - child_id
