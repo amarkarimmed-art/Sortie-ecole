@@ -187,6 +187,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Erreur lors du départ de l\'élève'**
   String get erreurDepart;
+
+  /// No description provided for @appTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie d\'école — App école'**
+  String get appTitle;
 }
 
 class _AppLocalizationsDelegate

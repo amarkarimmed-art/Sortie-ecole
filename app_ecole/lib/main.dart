@@ -37,9 +37,9 @@ class SortieEcoleApp extends StatelessWidget {
       ],
       initialRoute: initialRoute,
       routes: {
-        '/': (context) => const Scaffold(
+        '/': (context) => Scaffold(
               body: Center(
-                child: Text('Sortie d\'école - App école'),
+                child: Text(AppLocalizations.of(context)!.appTitle),
               ),
             ),
         '/surveillance': (context) {

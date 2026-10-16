@@ -43,5 +43,7 @@
   "boutonParti": "غادر",
   "@boutonParti": { "description": "Bouton pour marquer le départ de l'élève — à valider par un natif" },
   "erreurDepart": "حدث خطأ أثناء تسجيل مغادرة التلميذ",
-  "@erreurDepart": { "description": "Erreur lors du départ de l'élève — à valider par un natif" }
+  "@erreurDepart": { "description": "Erreur lors du départ de l'élève — à valider par un natif" },
+  "appTitle": "مغادرة المدرسة — تطبيق المدرسة",
+  "@appTitle": { "description": "Titre app — à valider par un natif" }
 }

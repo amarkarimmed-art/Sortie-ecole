@@ -56,4 +56,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get erreurDepart => 'حدث خطأ أثناء تسجيل مغادرة التلميذ';
+
+  @override
+  String get appTitle => 'مغادرة المدرسة — تطبيق المدرسة';
 }

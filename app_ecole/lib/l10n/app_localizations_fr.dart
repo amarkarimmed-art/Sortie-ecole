@@ -56,4 +56,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get erreurDepart => 'Erreur lors du départ de l\'élève';
+
+  @override
+  String get appTitle => 'Sortie d\'école — App école';
 }
