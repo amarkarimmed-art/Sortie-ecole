@@ -51,7 +51,7 @@ class QueueController extends BaseController
 
         $this->authorize('viewQueue', $school);
 
-        $requests = $action->handle($school);
+        $requests = $action->handle($school, $user);
 
         return QueueItemResource::collection($requests);
     }

@@ -38,7 +38,7 @@ class QueuePolicy extends BasePolicy
             abort(404, 'École introuvable.');
         }
 
-        return in_array($user->role, ['concierge', 'director'], true);
+        return in_array($user->role, ['concierge', 'director', 'surveillant'], true);
     }
 
     /**
