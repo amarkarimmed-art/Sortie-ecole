@@ -11,11 +11,11 @@ use App\Actions\Queue\ListActiveQueueAction;
 use App\Actions\Queue\MarkDepartAction;
 use App\Exceptions\Queue\HandoverDejaEnregistreException;
 use App\Exceptions\Queue\HandoverImpossibleException;
+use App\Exceptions\Queue\IdempotencyConflictException;
 use App\Http\Controllers\BaseController;
 use App\Http\Resources\QueueItemResource;
 use App\Models\PickupRequest;
 use App\Models\School;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -219,13 +219,18 @@ class QueueController extends BaseController
         }
 
         try {
-            $updated = $action->handle($pickupRequest, $user, (string) $idempotencyKey);
+            $response = $action->handle(
+                $pickupRequest,
+                $user,
+                (string) $idempotencyKey,
+                $request->except(['_method', '_token'])
+            );
 
+            return response()->json($response, 200);
+        } catch (IdempotencyConflictException $e) {
             return response()->json([
-                'id' => (string) $updated->id,
-                'status' => $updated->status,
-                'updated_at' => $updated->updated_at?->toISOString() ?? Carbon::now('Africa/Casablanca')->toISOString(),
-            ], 200);
+                'message' => $e->getMessage(),
+            ], 409);
         } catch (HandoverImpossibleException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
@@ -275,13 +280,18 @@ class QueueController extends BaseController
         }
 
         try {
-            $updated = $action->handle($pickupRequest, $user, (string) $idempotencyKey);
+            $response = $action->handle(
+                $pickupRequest,
+                $user,
+                (string) $idempotencyKey,
+                $request->except(['_method', '_token'])
+            );
 
+            return response()->json($response, 200);
+        } catch (IdempotencyConflictException $e) {
             return response()->json([
-                'id' => (string) $updated->id,
-                'status' => $updated->status,
-                'updated_at' => $updated->updated_at?->toISOString() ?? Carbon::now('Africa/Casablanca')->toISOString(),
-            ], 200);
+                'message' => $e->getMessage(),
+            ], 409);
         } catch (HandoverImpossibleException $e) {
             return response()->json([
                 'message' => $e->getMessage(),
