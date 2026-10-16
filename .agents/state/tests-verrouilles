@@ -20,7 +20,7 @@
 | Fichier | SHA-256 | Cible |
 | :--- | :--- | :--- |
 | backend/tests/Feature/F04/CA01F04CallClassTest.php | 8d733124795acc7f5a8360e494e5a79653d753685260c4208540e84cebcd60f1 | Pest / PostgreSQL |
-| backend/tests/Feature/F04/CA02F04MarkDepartTest.php | 821e4eacb8b0626e221d424e617119c7d0d0ac4fc6d3d694871f656ed7b08c96 | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA02F04MarkDepartTest.php | 419a5087bb49ea800008b8510204ecbaf26823c71c81b849ad147f5c20cd9167 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA03F04QueueSurveillantTest.php | 468bdfbbeb3c0a9a1e1322a8faab2662a46eceea5094f2330a7e7d92e3544e07 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA05F04ConcurrencyLockTest.php | 09d3aca02833f356fdc640ecf0ae6f710dbfc03986fc745837ac5eea4901780a | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | 13698b27633654cad1e4bd77ab376fd754f5a94e67dd924b5c175655b807df1a | Pest / PostgreSQL |
@@ -41,4 +41,5 @@
   dans CA13F04PayloadCalledTest.php. Correction mécanique d'un bug
   Laravel (ReflectsClosures::firstClosureParameterType exige un type
   hint ou une classe explicite). Assertions métier inchangées.
+- Correction CA9 (CA02F04MarkDepartTest.php) : réinitialisation explicite de actingAsConcierge($school) au début de chaque itération du foreach pour éviter la fuite d'état d'authentification Sanctum laissée par actingAsSurveillant à la fin de l'itération précédente. Assertions métier et cas de test rigoureusement identiques.
 

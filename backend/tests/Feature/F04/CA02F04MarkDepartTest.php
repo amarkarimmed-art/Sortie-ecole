@@ -127,13 +127,13 @@ test('CA8 : deux appels simultanés à /depart avec la même clé renvoient deux
 
 test('CA9 : appel ou départ sur une demande terminale (handed_over, cancelled, expired) renvoie HTTP 422', function () {
     $school = School::factory()->create();
-    $concierge = actingAsConcierge($school);
 
     foreach (['handedOver', 'cancelled', 'expired'] as $state) {
         $req = PickupRequest::factory()->$state()->create([
             'school_id' => $school->id,
         ]);
 
+        actingAsConcierge($school);
         $callRes = callClass($school, $req);
         $callRes->assertStatus(422);
 
