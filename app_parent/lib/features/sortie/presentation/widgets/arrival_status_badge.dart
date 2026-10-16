@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sortie_ui/sortie_ui.dart';
 
 import '../../domain/failures/arrival_exceptions.dart';
-import '../bloc/arrival_bloc.dart';
-import '../bloc/arrival_event.dart';
 import '../bloc/arrival_state.dart';
 
 /// Badge dynamique de statut d'arrivée F03.

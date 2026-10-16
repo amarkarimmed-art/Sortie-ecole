@@ -1,4 +1,4 @@
-import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart' hide LocationServiceDisabledException;
 import '../failures/arrival_exceptions.dart';
 
 /// Service d'abstraction de la géolocalisation native.
