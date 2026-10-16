@@ -29,9 +29,9 @@ class SurveillanceItem extends Equatable {
   factory SurveillanceItem.fromJson(Map<String, dynamic> json) {
     final rawName = json['child_name'] as String? ?? '';
     final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
-    final createdAtStr = json['created_at'] as String?;
-    final calledAt = createdAtStr != null
-        ? DateTime.tryParse(createdAtStr) ?? clock.now()
+    final calledAtStr = (json['called_at'] ?? json['created_at']) as String?;
+    final calledAt = calledAtStr != null
+        ? DateTime.tryParse(calledAtStr) ?? clock.now()
         : clock.now();
 
     return SurveillanceItem(
