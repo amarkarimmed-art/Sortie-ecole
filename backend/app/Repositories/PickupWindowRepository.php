@@ -20,6 +20,7 @@ class PickupWindowRepository extends BaseRepository implements PickupWindowRepos
      */
     public function getWindowsForSchoolAndDay(string $schoolId, int $dayOfWeek): Collection
     {
+        // Justifié : school_id explicite passé en clause WHERE, garantissant l'absence de fuite inter-écoles.
         return $this->model->newQuery()
             ->withoutGlobalScopes()
             ->where('school_id', $schoolId)

@@ -91,6 +91,7 @@ class ImportStudentsAction extends BaseAction
                     $phone1, $phone2, &$created, &$updated
                 ) {
                     // Créer ou mettre à jour l'élève (upsert sur school_id + first_name + last_name + class_name)
+                    // Justifié : school_id explicite passé dans les conditions d'upsert, garantissant l'étanchéité inter-écoles.
                     $childResult = Child::withoutGlobalScopes()->updateOrCreate(
                         [
                             'school_id' => $schoolId,
@@ -137,6 +138,7 @@ class ImportStudentsAction extends BaseAction
      */
     private function upsertParentAndLink(string $schoolId, string $phone, Child $child): void
     {
+        // Justifié : recherche par téléphone unique pour rattachement explicite à l'école, sans fuite inter-écoles.
         $parent = User::withoutGlobalScopes()->updateOrCreate(
             ['phone' => $phone],
             [
