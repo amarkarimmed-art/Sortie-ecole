@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../shared/services/reverb_service.dart';
 import '../domain/pickup_request_called_event.dart';
@@ -149,6 +150,29 @@ class SurveillanceRepository {
         isResyncing: false,
       ));
     }
+  }
+
+  /// Marquer le départ d'un élève (transition class_notified -> on_the_way).
+  ///
+  /// Envoie POST /api/v1/schools/{schoolId}/pickup-requests/{requestId}/depart
+  /// avec Idempotency-Key (UUID v4) et Bearer token.
+  /// Ne modifie pas l'état local directement : la file sera mise à jour
+  /// via l'écoute de l'événement WebSocket pickup.departed (B1, B4).
+  Future<void> markDepart(String requestId, {String? token}) async {
+    if (_dio == null) return;
+
+    final idempotencyKey = const Uuid().v4();
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+
+    await _dio.post(
+      '$_baseUrl/api/v1/schools/$_schoolId/pickup-requests/$requestId/depart',
+      options: Options(headers: headers),
+    );
   }
 
   /// Ajouter directement un item (pour tests).

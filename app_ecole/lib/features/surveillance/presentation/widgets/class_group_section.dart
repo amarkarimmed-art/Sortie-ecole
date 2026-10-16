@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../l10n/app_localizations.dart';
+import '../../data/surveillance_repository.dart';
 import '../../domain/surveillance_item.dart';
 import 'child_call_card.dart';
 
@@ -10,11 +11,15 @@ import 'child_call_card.dart';
 class ClassGroupSection extends StatelessWidget {
   final String className;
   final List<SurveillanceItem> items;
+  final SurveillanceRepository? repository;
+  final Future<void> Function(String requestId)? onDepart;
 
   const ClassGroupSection({
     super.key,
     required this.className,
     required this.items,
+    this.repository,
+    this.onDepart,
   });
 
   @override
@@ -74,6 +79,8 @@ class ClassGroupSection extends StatelessWidget {
           ...items.map((item) => ChildCallCard(
                 key: ValueKey(item.requestId),
                 item: item,
+                repository: repository,
+                onDepart: onDepart,
               )),
         ],
       ),

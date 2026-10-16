@@ -197,6 +197,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                     ...grouped.entries.map((entry) => ClassGroupSection(
                           className: entry.key,
                           items: entry.value,
+                          repository: _repository,
                         )),
                   ],
                 );
