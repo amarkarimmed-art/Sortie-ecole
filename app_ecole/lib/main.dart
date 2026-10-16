@@ -42,7 +42,10 @@ class SortieEcoleApp extends StatelessWidget {
                 child: Text('Sortie d\'école - App école'),
               ),
             ),
-        '/surveillance': (context) => const SurveillanceScreen(),
+        '/surveillance': (context) {
+          final token = ModalRoute.of(context)?.settings.arguments as String?;
+          return SurveillanceScreen(token: token);
+        },
       },
     );
   }

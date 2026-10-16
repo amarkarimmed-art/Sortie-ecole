@@ -17,11 +17,13 @@ import 'widgets/class_group_section.dart';
 class SurveillanceScreen extends StatefulWidget {
   final SurveillanceRepository? repository;
   final ReverbService? reverbService;
+  final String? token;
 
   const SurveillanceScreen({
     super.key = const Key('ecran_surveillance'),
     this.repository,
     this.reverbService,
+    this.token,
   });
 
   @override
@@ -52,13 +54,16 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     }
 
     _repository.init();
-    _repository.loadInitialQueue();
+    _repository.loadInitialQueue(token: widget.token);
+    _repository.reverbService.connect(authToken: widget.token);
   }
 
   @override
   void dispose() {
+    _repository.reverbService.disconnect();
     if (_ownsRepository) {
       _repository.dispose();
+      _repository.reverbService.dispose();
     }
     super.dispose();
   }
@@ -140,7 +145,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                         ),
                         const SizedBox(height: 16.0),
                         ElevatedButton.icon(
-                          onPressed: () => _repository.loadInitialQueue(),
+                          onPressed: () => _repository.loadInitialQueue(token: widget.token),
                           icon: const Icon(Icons.refresh),
                           label: Text(l10n.reessayer),
                           style: ElevatedButton.styleFrom(
