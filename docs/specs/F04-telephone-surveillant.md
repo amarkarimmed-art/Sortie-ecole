@@ -166,9 +166,12 @@ Transitions peu fréquentes (quelques par minute), pas de saturation worker,
 latence sub-seconde garantie sans passer par Redis queue.
 
 ### Q11 — Stockage des Idempotency-Key
-Décision : réutiliser la table idempotency_keys créée en F02. Même
-mécanisme (empreinte SHA-256 du corps, unique par utilisateur). Aucune
-nouvelle table.
+Décision : table dédiée idempotency_keys créée dans F04 (colonne
+user_id, key_hash, request_hash, endpoint, response_status,
+response_body). F02 reste sur son pattern colonne handover_logs.
+Semantiques différentes assumées : F02 renvoie 409 sur rejeu
+(création de log d'audit), F04 renvoie 200 (transition d'état
+naturellement idempotente).
 
 ### Q12 — Double départ concurrent, deux clés
 Décision : idempotence au niveau de l'état final. Le premier /depart
@@ -199,3 +202,9 @@ Décision : formalisé en CA19.
 
 ### Q18 — Test notification parent on_the_way
 Décision : formalisé en CA20.
+
+### Q19 — Filtrage des données personnelles dans GET /queue
+Décision : le rôle surveillant reçoit child_name (nom complet)
+pour pouvoir appeler l'élève en classe (besoin métier), mais
+photo_url est retirée (inutile pour l'appel, minimisation 09-08).
+Le rôle concierge/director reçoit tout (tablette accueil).

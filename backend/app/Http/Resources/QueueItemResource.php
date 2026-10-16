@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class QueueItemResource extends JsonResource
@@ -35,6 +36,7 @@ class QueueItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         $childName = trim(($this->child?->first_name ?? '').' '.($this->child?->last_name ?? ''));
+        $isSurveillant = ($request->user()?->role ?? Auth::user()?->role) === 'surveillant';
 
         return [
             'id' => (string) $this->id,
@@ -43,7 +45,7 @@ class QueueItemResource extends JsonResource
             'class_name' => $this->child?->class_name ?? '',
             'status' => $this->status,
             'waiting_zone' => null,
-            'photo_url' => $this->resolvePhotoUrl(),
+            'photo_url' => $isSurveillant ? null : $this->resolvePhotoUrl(),
             'created_at' => $this->created_at?->toIso8601String(),
             'called_at' => $this->called_at?->toIso8601String(),
         ];
