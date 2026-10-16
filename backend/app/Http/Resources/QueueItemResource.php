@@ -45,6 +45,7 @@ class QueueItemResource extends JsonResource
             'waiting_zone' => null,
             'photo_url' => $this->resolvePhotoUrl(),
             'created_at' => $this->created_at?->toIso8601String(),
+            'called_at' => $this->called_at?->toIso8601String(),
         ];
     }
 
