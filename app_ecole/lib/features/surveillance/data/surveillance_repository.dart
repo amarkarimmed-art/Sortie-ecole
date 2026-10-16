@@ -26,6 +26,8 @@ class SurveillanceRepository {
   StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
   StreamSubscription<void>? _resyncSubscription;
 
+  String? _authToken;
+
   SurveillanceRepository({
     Dio? dio,
     required String baseUrl,
@@ -59,13 +61,18 @@ class SurveillanceRepository {
 
   /// Charger la file d'attente initiale depuis GET /schools/{schoolId}/queue.
   Future<void> loadInitialQueue({String? token}) async {
+    if (token != null) {
+      _authToken = token;
+    }
     _stateController.add(const SurveillanceLoading());
-    await reloadFromQueue(token: token);
+    await reloadFromQueue(token: _authToken);
   }
 
   /// Recharger l'état complet depuis GET /queue (CA15).
   Future<void> reloadFromQueue({String? token, bool isResync = false}) async {
     try {
+      final effectiveToken = token ?? _authToken;
+
       if (isResync && _currentItems.isNotEmpty) {
         _stateController.add(SurveillanceLoaded(
           items: List.from(_currentItems),
@@ -76,7 +83,7 @@ class SurveillanceRepository {
       if (_dio != null) {
         final headers = <String, dynamic>{
           'Accept': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
+          if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
         };
 
         final response = await _dio.get(
@@ -161,12 +168,13 @@ class SurveillanceRepository {
   Future<void> markDepart(String requestId, {String? token}) async {
     if (_dio == null) return;
 
+    final effectiveToken = token ?? _authToken;
     final idempotencyKey = const Uuid().v4();
     final headers = <String, dynamic>{
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Idempotency-Key': idempotencyKey,
-      if (token != null) 'Authorization': 'Bearer $token',
+      if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
     };
 
     await _dio.post(
