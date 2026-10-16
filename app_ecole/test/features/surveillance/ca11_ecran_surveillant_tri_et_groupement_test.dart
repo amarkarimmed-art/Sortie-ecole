@@ -1,4 +1,5 @@
 import 'package:app_ecole/features/surveillance/presentation/surveillance_screen.dart';
+import 'package:app_ecole/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,8 +9,10 @@ void main() {
       'CA11 : L\'écran surveillant affiche les demandes class_notified groupées par classe',
       (tester) async {
         await tester.pumpWidget(
-          const MaterialApp(
-            home: SurveillanceScreen(),
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const SurveillanceScreen(),
           ),
         );
 
