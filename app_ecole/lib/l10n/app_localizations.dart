@@ -145,6 +145,42 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Reconnexion réussie — file resynchronisée'**
   String get reconnexionReussie;
+
+  /// No description provided for @enDirect.
+  ///
+  /// In fr, this message translates to:
+  /// **'En direct'**
+  String get enDirect;
+
+  /// No description provided for @reconnexionEnCours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Reconnexion...'**
+  String get reconnexionEnCours;
+
+  /// No description provided for @miseAJourEnCours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mise à jour en cours...'**
+  String get miseAJourEnCours;
+
+  /// No description provided for @statutPrevenu.
+  ///
+  /// In fr, this message translates to:
+  /// **'Prévenu'**
+  String get statutPrevenu;
+
+  /// No description provided for @sansClasse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sans classe'**
+  String get sansClasse;
+
+  /// No description provided for @boutonParti.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parti'**
+  String get boutonParti;
 }
 
 class _AppLocalizationsDelegate

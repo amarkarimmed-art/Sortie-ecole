@@ -21,5 +21,11 @@
       }
     }
   },
-  "reconnexionReussie": "Reconnexion réussie — file resynchronisée"
+  "reconnexionReussie": "Reconnexion réussie — file resynchronisée",
+  "enDirect": "En direct",
+  "reconnexionEnCours": "Reconnexion...",
+  "miseAJourEnCours": "Mise à jour en cours...",
+  "statutPrevenu": "Prévenu",
+  "sansClasse": "Sans classe",
+  "boutonParti": "Parti"
 }

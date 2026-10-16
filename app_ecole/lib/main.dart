@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'features/surveillance/presentation/surveillance_screen.dart';
+import 'l10n/app_localizations.dart';
 
 /// Point d'entrée de l'application école (tablette accueil + téléphone surveillant).
 ///
@@ -25,6 +26,7 @@ class SortieEcoleApp extends StatelessWidget {
     return MaterialApp(
       title: "Sortie d'école - Accueil & Surveillance",
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

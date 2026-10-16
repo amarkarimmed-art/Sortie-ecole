@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/surveillance_item.dart';
 import 'child_call_card.dart';
 
@@ -19,6 +20,7 @@ class ClassGroupSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsetsDirectional.only(bottom: 16.0),
@@ -40,7 +42,7 @@ class ClassGroupSection extends StatelessWidget {
                 ),
                 const SizedBox(width: 8.0),
                 Text(
-                  className.isNotEmpty ? className : 'Sans classe',
+                  className.isNotEmpty ? className : (l10n?.sansClasse ?? 'Sans classe'),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.primary,

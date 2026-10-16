@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/reverb_service.dart';
 import '../data/surveillance_repository.dart';
 import '../domain/pickup_request_called_event.dart';
@@ -65,10 +66,11 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Surveillance des sorties'),
+        title: Text(l10n.ecranSurveillanceTitre),
         actions: [
           // Indicateur de resynchronisation / état WS (CA15)
           StreamBuilder<void>(
@@ -87,7 +89,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                     ),
                     const SizedBox(width: 4.0),
                     Text(
-                      isConnected ? 'En direct' : 'Reconnexion...',
+                      isConnected ? l10n.enDirect : l10n.reconnexionEnCours,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isConnected ? Colors.green : Colors.orange,
                       ),
@@ -140,7 +142,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                         ElevatedButton.icon(
                           onPressed: () => _repository.loadInitialQueue(),
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Réessayer'),
+                          label: Text(l10n.reessayer),
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size(120, 48),
                           ),
@@ -155,10 +157,10 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                 final grouped = state.groupedByClass;
 
                 if (grouped.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'Aucun élève appelé pour le moment',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      l10n.aucunEleveAppele,
+                      style: const TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   );
                 }
@@ -183,7 +185,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                             ),
                             const SizedBox(width: 8.0),
                             Text(
-                              'Mise à jour en cours...',
+                              l10n.miseAJourEnCours,
                               style: TextStyle(
                                 color: Colors.blue.shade900,
                                 fontSize: 12,

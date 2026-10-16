@@ -1,25 +1,15 @@
 {
   "@@locale": "ar",
   "ecranSurveillanceTitre": "مراقبة مغادرة التلاميذ",
-  "@ecranSurveillanceTitre": {
-    "description": "Titre écran surveillance — à valider par un natif"
-  },
+  "@ecranSurveillanceTitre": { "description": "Titre écran surveillance — à valider par un natif" },
   "chargementFile": "جاري تحميل القائمة...",
-  "@chargementFile": {
-    "description": "Message de chargement — à valider par un natif"
-  },
+  "@chargementFile": { "description": "Message de chargement — à valider par un natif" },
   "aucunEleveAppele": "لا يوجد تلاميذ تم النداء عليهم حالياً",
-  "@aucunEleveAppele": {
-    "description": "Message liste vide — à valider par un natif"
-  },
+  "@aucunEleveAppele": { "description": "Message liste vide — à valider par un natif" },
   "reessayer": "إعادة المحاولة",
-  "@reessayer": {
-    "description": "Bouton réessayer — à valider par un natif"
-  },
+  "@reessayer": { "description": "Bouton réessayer — à valider par un natif" },
   "erreurChargement": "حدث خطأ أثناء تحميل القائمة",
-  "@erreurChargement": {
-    "description": "Erreur chargement — à valider par un natif"
-  },
+  "@erreurChargement": { "description": "Erreur chargement — à valider par un natif" },
   "classeTitre": "قسم {className}",
   "@classeTitre": {
     "description": "En-tête de classe — à valider par un natif",
@@ -39,7 +29,17 @@
     }
   },
   "reconnexionReussie": "تمت إعادة الاتصال وتحديث القائمة",
-  "@reconnexionReussie": {
-    "description": "Message resynchronisation — à valider par un natif"
-  }
+  "@reconnexionReussie": { "description": "Message resynchronisation — à valider par un natif" },
+  "enDirect": "مباشر",
+  "@enDirect": { "description": "Indicateur WebSocket connecté — à valider par un natif" },
+  "reconnexionEnCours": "جاري إعادة الاتصال...",
+  "@reconnexionEnCours": { "description": "Indicateur WebSocket déconnecté — à valider par un natif" },
+  "miseAJourEnCours": "جاري التحديث...",
+  "@miseAJourEnCours": { "description": "Bandeau resynchronisation — à valider par un natif" },
+  "statutPrevenu": "تم الإشعار",
+  "@statutPrevenu": { "description": "Badge statut class_notified — à valider par un natif" },
+  "sansClasse": "بدون قسم",
+  "@sansClasse": { "description": "En-tête élève sans classe — à valider par un natif" },
+  "boutonParti": "غادر",
+  "@boutonParti": { "description": "Bouton pour marquer le départ de l'élève — à valider par un natif" }
 }

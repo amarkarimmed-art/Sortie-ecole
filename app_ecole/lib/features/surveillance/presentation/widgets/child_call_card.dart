@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../l10n/app_localizations.dart';
 import '../../domain/surveillance_item.dart';
 
 /// Carte représentant un élève appelé.
@@ -88,7 +89,7 @@ class ChildCallCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: Text(
-                  'Prévenu',
+                  AppLocalizations.of(context)?.statutPrevenu ?? 'Prévenu',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: Colors.amber.shade900,
                     fontWeight: FontWeight.bold,

@@ -35,4 +35,22 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reconnexionReussie => 'Reconnexion réussie — file resynchronisée';
+
+  @override
+  String get enDirect => 'En direct';
+
+  @override
+  String get reconnexionEnCours => 'Reconnexion...';
+
+  @override
+  String get miseAJourEnCours => 'Mise à jour en cours...';
+
+  @override
+  String get statutPrevenu => 'Prévenu';
+
+  @override
+  String get sansClasse => 'Sans classe';
+
+  @override
+  String get boutonParti => 'Parti';
 }

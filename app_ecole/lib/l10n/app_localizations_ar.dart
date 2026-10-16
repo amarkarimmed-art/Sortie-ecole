@@ -35,4 +35,22 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get reconnexionReussie => 'تمت إعادة الاتصال وتحديث القائمة';
+
+  @override
+  String get enDirect => 'مباشر';
+
+  @override
+  String get reconnexionEnCours => 'جاري إعادة الاتصال...';
+
+  @override
+  String get miseAJourEnCours => 'جاري التحديث...';
+
+  @override
+  String get statutPrevenu => 'تم الإشعار';
+
+  @override
+  String get sansClasse => 'بدون قسم';
+
+  @override
+  String get boutonParti => 'غادر';
 }
