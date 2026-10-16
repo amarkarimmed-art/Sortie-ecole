@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 
 /// Événement Reverb diffusé lors de l'appel d'un élève (transition requested -> class_notified).
@@ -28,7 +29,7 @@ class PickupRequestCalledEvent extends Equatable {
       schoolId: json['school_id'] as String? ?? '',
       className: json['class_name'] as String? ?? '',
       childInitial: json['child_initial'] as String? ?? '',
-      receivedAt: receivedAt ?? DateTime.now(),
+      receivedAt: receivedAt ?? clock.now(),
     );
   }
 

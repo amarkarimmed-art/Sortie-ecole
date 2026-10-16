@@ -1,3 +1,4 @@
+import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'pickup_request_called_event.dart';
 
@@ -30,8 +31,8 @@ class SurveillanceItem extends Equatable {
     final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
     final createdAtStr = json['created_at'] as String?;
     final calledAt = createdAtStr != null
-        ? DateTime.tryParse(createdAtStr) ?? DateTime.now()
-        : DateTime.now();
+        ? DateTime.tryParse(createdAtStr) ?? clock.now()
+        : clock.now();
 
     return SurveillanceItem(
       requestId: json['id'] as String? ?? '',
