@@ -51,7 +51,7 @@
   le surveillant ne voit QUE les class_notified de sa propre école.
   Aucun autre test F02 modifié (CA1-a, CA1-c, CA1-d, CA1-e, CA2, CA3,
   CA4 restent inchangés).
-- Commit 45e0815 (réécriture des 3 tests Dart F04) :
+- Commit 4c8861d (réécriture des 3 tests Dart F04) :
   remplacement des squelettes placeholders par des tests widget montant
   SurveillanceScreen. Motif : les tests initiaux (bloc 5) montaient un
   Scaffold contenant un Text('Placeholder') et vérifiaient ensuite la
