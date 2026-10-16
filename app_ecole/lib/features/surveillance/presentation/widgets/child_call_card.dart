@@ -41,14 +41,25 @@ class _ChildCallCardState extends State<ChildCallCard> {
       } else if (widget.repository != null) {
         await widget.repository!.markDepart(widget.item.id);
       }
-    } catch (_) {
-      // Ignorer l'erreur réseau éventuelle
-    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
           _isDeparted = true;
         });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n?.erreurDepart ?? 'Erreur lors du départ de l\'élève',
+            ),
+          ),
+        );
       }
     }
   }

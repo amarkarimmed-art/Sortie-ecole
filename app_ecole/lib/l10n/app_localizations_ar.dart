@@ -53,4 +53,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get boutonParti => 'غادر';
+
+  @override
+  String get erreurDepart => 'حدث خطأ أثناء تسجيل مغادرة التلميذ';
 }

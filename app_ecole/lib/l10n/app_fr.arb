@@ -27,5 +27,6 @@
   "miseAJourEnCours": "Mise à jour en cours...",
   "statutPrevenu": "Prévenu",
   "sansClasse": "Sans classe",
-  "boutonParti": "Parti"
+  "boutonParti": "Parti",
+  "erreurDepart": "Erreur lors du départ de l'élève"
 }

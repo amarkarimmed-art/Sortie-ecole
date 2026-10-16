@@ -181,6 +181,12 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Parti'**
   String get boutonParti;
+
+  /// No description provided for @erreurDepart.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur lors du départ de l\'élève'**
+  String get erreurDepart;
 }
 
 class _AppLocalizationsDelegate

@@ -53,4 +53,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get boutonParti => 'Parti';
+
+  @override
+  String get erreurDepart => 'Erreur lors du départ de l\'élève';
 }

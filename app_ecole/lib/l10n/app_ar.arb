@@ -41,5 +41,7 @@
   "sansClasse": "بدون قسم",
   "@sansClasse": { "description": "En-tête élève sans classe — à valider par un natif" },
   "boutonParti": "غادر",
-  "@boutonParti": { "description": "Bouton pour marquer le départ de l'élève — à valider par un natif" }
+  "@boutonParti": { "description": "Bouton pour marquer le départ de l'élève — à valider par un natif" },
+  "erreurDepart": "حدث خطأ أثناء تسجيل مغادرة التلميذ",
+  "@erreurDepart": { "description": "Erreur lors du départ de l'élève — à valider par un natif" }
 }
