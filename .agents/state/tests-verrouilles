@@ -42,7 +42,7 @@
   Laravel (ReflectsClosures::firstClosureParameterType exige un type
   hint ou une classe explicite). Assertions métier inchangées.
 - Correction CA9 (CA02F04MarkDepartTest.php) : réinitialisation explicite de actingAsConcierge($school) au début de chaque itération du foreach pour éviter la fuite d'état d'authentification Sanctum laissée par actingAsSurveillant à la fin de l'itération précédente. Assertions métier et cas de test rigoureusement identiques.
-- Commit d68a09c (correction F02 CA1-b) : mise à jour de
+- Commit bd1cabb (correction F02 CA1-b) : mise à jour de
   l'assertion pour le rôle surveillant sur GET /queue, de 403 vers 200.
   Motif : décision Q2 de F04 (spec F04) et contrat OpenAPI
   (api/openapi.yaml L405-408) étendent explicitement l'accès au rôle
