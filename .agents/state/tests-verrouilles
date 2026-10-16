@@ -11,7 +11,7 @@
 
 | Fichier | SHA-256 | Cible |
 | :--- | :--- | :--- |
-| backend/tests/Feature/F02/CA01F02QueueAccessTest.php | 840d34b8f12fc9b31a15f21854210ff8729bbb983cd25ed2f6ab0a8db68759a8 | Pest / PostgreSQL |
+| backend/tests/Feature/F02/CA01F02QueueAccessTest.php | d11ef96b5783425ef26b375fafd301e4b3ae46db7c69b9febd96ddbef011328a | Pest / PostgreSQL |
 | backend/tests/Feature/F02/CA03F02QueueTriEtDateTest.php | a8c7f5d5de4fd04f9fe3b32d0cac2f1745369bc5ba4543ffd55b3c4e19b291a5 | Pest / PostgreSQL |
 | backend/tests/Feature/F02/CA04F02HandoverIdempotenceTest.php | 3caca64d93aea6bdd17df21dbc8be332faf129aac49c7f67d9c07e84b9c8f8ab | Pest / PostgreSQL |
 
@@ -42,4 +42,14 @@
   Laravel (ReflectsClosures::firstClosureParameterType exige un type
   hint ou une classe explicite). Assertions métier inchangées.
 - Correction CA9 (CA02F04MarkDepartTest.php) : réinitialisation explicite de actingAsConcierge($school) au début de chaque itération du foreach pour éviter la fuite d'état d'authentification Sanctum laissée par actingAsSurveillant à la fin de l'itération précédente. Assertions métier et cas de test rigoureusement identiques.
+- Commit d68a09c (correction F02 CA1-b) : mise à jour de
+  l'assertion pour le rôle surveillant sur GET /queue, de 403 vers 200.
+  Motif : décision Q2 de F04 (spec F04) et contrat OpenAPI
+  (api/openapi.yaml L405-408) étendent explicitement l'accès au rôle
+  surveillant, avec filtre serveur class_notified. L'intention de F02
+  (isolation stricte, restriction aux rôles de l'accueil) est préservée :
+  le surveillant ne voit QUE les class_notified de sa propre école.
+  Aucun autre test F02 modifié (CA1-a, CA1-c, CA1-d, CA1-e, CA2, CA3,
+  CA4 restent inchangés).
+
 

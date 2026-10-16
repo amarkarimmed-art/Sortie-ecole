@@ -45,9 +45,10 @@ test('CA1 [rouge] : Un utilisateur avec le rôle parent reçoit HTTP 403 sur GET
 })->group('F02', 'CA1');
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CA1-b : Un surveillant (rôle non autorisé) reçoit HTTP 403
+// CA1-b : Un surveillant de l'école reçoit HTTP 200 (accès restreint
+//         au filtre class_notified, décision F04 Q2 + OpenAPI)
 // ─────────────────────────────────────────────────────────────────────────────
-test('CA1 [rouge] : Un utilisateur avec le rôle surveillant reçoit HTTP 403 sur GET /queue', function () {
+test('CA1 : Un utilisateur avec le rôle surveillant reçoit HTTP 200 sur GET /queue', function () {
     $school = School::factory()->create();
     $surveillant = User::factory()->create([
         'school_id' => $school->id,
@@ -58,8 +59,8 @@ test('CA1 [rouge] : Un utilisateur avec le rôle surveillant reçoit HTTP 403 su
 
     $response = $this->getJson("/api/v1/schools/{$school->id}/queue");
 
-    // Doit être ROUGE : reçoit 501 jusqu'à l'implémentation de la policy
-    $response->assertStatus(403);
+    $response->assertStatus(200);
+    $response->assertJsonIsArray();
 })->group('F02', 'CA1');
 
 // ─────────────────────────────────────────────────────────────────────────────
