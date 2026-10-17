@@ -17,11 +17,12 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [
-        env('FRONTEND_URL', 'http://localhost:3000'),
-    ],
+    'allowed_origins' => array_filter(explode(',', env('CORS_ALLOWED_ORIGINS', ''))),
 
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => env('APP_ENV') === 'production' ? [] : [
+        '#^http://localhost(:\d+)?$#',
+        '#^http://127\.0\.0\.1(:\d+)?$#',
+    ],
 
     'allowed_headers' => ['*'],
 
