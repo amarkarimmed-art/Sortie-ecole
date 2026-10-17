@@ -43,10 +43,13 @@ trait BelongsToSchool
                 $user = Auth::user();
 
                 if ($user && method_exists($user, 'getSchoolId')) {
-                    $builder->where(
-                        $model->getTable().'.school_id',
-                        $user->getSchoolId()
-                    );
+                    $schoolId = $user->getSchoolId();
+                    if (!empty($schoolId)) {
+                        $builder->where(
+                            $model->getTable().'.school_id',
+                            $schoolId
+                        );
+                    }
                 }
             }
         });
@@ -56,7 +59,10 @@ trait BelongsToSchool
             $user = Auth::user();
 
             if ($user && method_exists($user, 'getSchoolId') && empty($model->school_id)) {
-                $model->school_id = $user->getSchoolId();
+                $schoolId = $user->getSchoolId();
+                if (!empty($schoolId)) {
+                    $model->school_id = $schoolId;
+                }
             }
         });
     }
