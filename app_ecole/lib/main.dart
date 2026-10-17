@@ -37,7 +37,8 @@ class SortieEcoleApp extends StatelessWidget {
       ],
       initialRoute: initialRoute,
       home: const SurveillanceScreen(
-        token: '9|N6dYwzlN3UVjRNCXX8N84wHMOm8xxl1gUGWn3J653d36d002',
+        token: '1|8wQfxcW4rmyoO2tMLT5r6zfbrocNQgfXMMNgk0HY6bc51190',
+        schoolId: 'a301300a-fccd-4364-af68-de50852db309',
       ),
       routes: {
         '/surveillance': (context) {
