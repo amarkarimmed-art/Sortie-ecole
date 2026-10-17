@@ -36,10 +36,7 @@ class SortieEcoleApp extends StatelessWidget {
         Locale('ar'),
       ],
       initialRoute: initialRoute,
-      home: const SurveillanceScreen(
-        token: '7|4WsEVz7nnJwh1hwqv574gF4j91UJL9GBHTDMeyqJfb6a3bfe',
-        schoolId: '11111111-1111-1111-1111-111111111111',
-      ),
+      home: const SurveillanceScreen(),
       routes: {
         '/surveillance': (context) {
           final token = ModalRoute.of(context)?.settings.arguments as String?;
