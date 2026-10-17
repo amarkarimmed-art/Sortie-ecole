@@ -29,5 +29,50 @@
   "sansClasse": "Sans classe",
   "boutonParti": "Parti",
   "erreurDepart": "Erreur lors du départ de l'élève",
-  "appTitle": "Sortie d'école — App école"
+  "appTitle": "Sortie d'école — App école",
+  "loginTitre": "Connexion Espace École",
+  "loginSousTitre": "Portail d'accueil et surveillance des sorties d'élèves",
+  "loginBadgePersonnel": "Personnel scolaire",
+  "loginNumeroLabel": "Numéro de téléphone",
+  "loginNumeroHint": "6 12 34 56 78",
+  "loginIndicatifMaroc": "+212",
+  "loginAideSaisie": "Saisissez votre numéro de mobile professionnel",
+  "loginBoutonEnvoyer": "Recevoir le code SMS",
+  "loginErreurTelephoneRequis": "Veuillez saisir votre numéro de téléphone",
+  "loginErreurTelephoneInvalide": "Numéro de téléphone invalide (format attendu : 06/07XXXXXXXX)",
+  "loginTitreOtp": "Vérification du code SMS",
+  "loginSousTitreOtp": "Saisissez le code secret à 6 chiffres envoyé au {phone}",
+  "@loginSousTitreOtp": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "loginOtpLabel": "Code de vérification",
+  "loginOtpHint": "000000",
+  "loginBoutonValider": "Valider et se connecter",
+  "loginBoutonModifierNumero": "Modifier le numéro",
+  "loginBoutonRenvoyer": "Renvoyer le code",
+  "loginRenvoyerDans": "Renvoyer dans {seconds}s",
+  "@loginRenvoyerDans": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "loginErreurOtpRequis": "Veuillez saisir le code à 6 chiffres",
+  "loginErreurOtpInvalide": "Le code doit comporter exactement 6 chiffres",
+  "loginErreurOtpEchoue": "Code SMS incorrect ou expiré. Veuillez réessayer.",
+  "loginErreurUtilisateurIntrouvable": "Utilisateur introuvable. Veuillez contacter l'administration de l'établissement.",
+  "loginErreurTropDeTentatives": "Trop de tentatives. Veuillez patienter avant de réessayer.",
+  "loginErreurRoleNonAutorise": "Accès réservé au personnel de l'école (surveillants, accueil, direction).",
+  "loginErreurReseau": "Erreur de connexion. Vérifiez votre réseau internet.",
+  "loginBadgeSecurite": "Conforme CNDP & Loi 09-08 — Données protégées",
+  "loginSucces": "Connexion réussie. Bienvenue !",
+  "loginChangerLangue": "Changer la langue",
+  "roleSurveillant": "Surveillant",
+  "roleAgent": "Agent d'accueil",
+  "roleDirection": "Direction"
 }

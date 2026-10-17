@@ -193,6 +193,192 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Sortie d\'école — App école'**
   String get appTitle;
+
+  /// No description provided for @loginTitre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion Espace École'**
+  String get loginTitre;
+
+  /// No description provided for @loginSousTitre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Portail d\'accueil et surveillance des sorties d\'élèves'**
+  String get loginSousTitre;
+
+  /// No description provided for @loginBadgePersonnel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Personnel scolaire'**
+  String get loginBadgePersonnel;
+
+  /// No description provided for @loginNumeroLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro de téléphone'**
+  String get loginNumeroLabel;
+
+  /// No description provided for @loginNumeroHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'6 12 34 56 78'**
+  String get loginNumeroHint;
+
+  /// No description provided for @loginIndicatifMaroc.
+  ///
+  /// In fr, this message translates to:
+  /// **'+212'**
+  String get loginIndicatifMaroc;
+
+  /// No description provided for @loginAideSaisie.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez votre numéro de mobile professionnel'**
+  String get loginAideSaisie;
+
+  /// No description provided for @loginBoutonEnvoyer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recevoir le code SMS'**
+  String get loginBoutonEnvoyer;
+
+  /// No description provided for @loginErreurTelephoneRequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez saisir votre numéro de téléphone'**
+  String get loginErreurTelephoneRequis;
+
+  /// No description provided for @loginErreurTelephoneInvalide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Numéro de téléphone invalide (format attendu : 06/07XXXXXXXX)'**
+  String get loginErreurTelephoneInvalide;
+
+  /// No description provided for @loginTitreOtp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Vérification du code SMS'**
+  String get loginTitreOtp;
+
+  /// No description provided for @loginSousTitreOtp.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisissez le code secret à 6 chiffres envoyé au {phone}'**
+  String loginSousTitreOtp(String phone);
+
+  /// No description provided for @loginOtpLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code de vérification'**
+  String get loginOtpLabel;
+
+  /// No description provided for @loginOtpHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'000000'**
+  String get loginOtpHint;
+
+  /// No description provided for @loginBoutonValider.
+  ///
+  /// In fr, this message translates to:
+  /// **'Valider et se connecter'**
+  String get loginBoutonValider;
+
+  /// No description provided for @loginBoutonModifierNumero.
+  ///
+  /// In fr, this message translates to:
+  /// **'Modifier le numéro'**
+  String get loginBoutonModifierNumero;
+
+  /// No description provided for @loginBoutonRenvoyer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyer le code'**
+  String get loginBoutonRenvoyer;
+
+  /// No description provided for @loginRenvoyerDans.
+  ///
+  /// In fr, this message translates to:
+  /// **'Renvoyer dans {seconds}s'**
+  String loginRenvoyerDans(int seconds);
+
+  /// No description provided for @loginErreurOtpRequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez saisir le code à 6 chiffres'**
+  String get loginErreurOtpRequis;
+
+  /// No description provided for @loginErreurOtpInvalide.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code doit comporter exactement 6 chiffres'**
+  String get loginErreurOtpInvalide;
+
+  /// No description provided for @loginErreurOtpEchoue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code SMS incorrect ou expiré. Veuillez réessayer.'**
+  String get loginErreurOtpEchoue;
+
+  /// No description provided for @loginErreurUtilisateurIntrouvable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Utilisateur introuvable. Veuillez contacter l\'administration de l\'établissement.'**
+  String get loginErreurUtilisateurIntrouvable;
+
+  /// No description provided for @loginErreurTropDeTentatives.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives. Veuillez patienter avant de réessayer.'**
+  String get loginErreurTropDeTentatives;
+
+  /// No description provided for @loginErreurRoleNonAutorise.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès réservé au personnel de l\'école (surveillants, accueil, direction).'**
+  String get loginErreurRoleNonAutorise;
+
+  /// No description provided for @loginErreurReseau.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur de connexion. Vérifiez votre réseau internet.'**
+  String get loginErreurReseau;
+
+  /// No description provided for @loginBadgeSecurite.
+  ///
+  /// In fr, this message translates to:
+  /// **'Conforme CNDP & Loi 09-08 — Données protégées'**
+  String get loginBadgeSecurite;
+
+  /// No description provided for @loginSucces.
+  ///
+  /// In fr, this message translates to:
+  /// **'Connexion réussie. Bienvenue !'**
+  String get loginSucces;
+
+  /// No description provided for @loginChangerLangue.
+  ///
+  /// In fr, this message translates to:
+  /// **'Changer la langue'**
+  String get loginChangerLangue;
+
+  /// No description provided for @roleSurveillant.
+  ///
+  /// In fr, this message translates to:
+  /// **'Surveillant'**
+  String get roleSurveillant;
+
+  /// No description provided for @roleAgent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Agent d\'accueil'**
+  String get roleAgent;
+
+  /// No description provided for @roleDirection.
+  ///
+  /// In fr, this message translates to:
+  /// **'Direction'**
+  String get roleDirection;
 }
 
 class _AppLocalizationsDelegate

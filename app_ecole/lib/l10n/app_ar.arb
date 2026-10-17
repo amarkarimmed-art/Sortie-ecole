@@ -45,5 +45,81 @@
   "erreurDepart": "حدث خطأ أثناء تسجيل مغادرة التلميذ",
   "@erreurDepart": { "description": "Erreur lors du départ de l'élève — à valider par un natif" },
   "appTitle": "مغادرة المدرسة — تطبيق المدرسة",
-  "@appTitle": { "description": "Titre app — à valider par un natif" }
+  "@appTitle": { "description": "Titre app — à valider par un natif" },
+  "loginTitre": "تسجيل الدخول — فضاء المدرسة",
+  "@loginTitre": { "description": "Titre page de connexion — à valider par un natif" },
+  "loginSousTitre": "بوابة الاستقبال ومراقبة مغادرة التلاميذ",
+  "@loginSousTitre": { "description": "Sous-titre page de connexion — à valider par un natif" },
+  "loginBadgePersonnel": "أطر المدرسة",
+  "@loginBadgePersonnel": { "description": "Badge personnel scolaire — à valider par un natif" },
+  "loginNumeroLabel": "رقم الهاتف",
+  "@loginNumeroLabel": { "description": "Libellé champ téléphone — à valider par un natif" },
+  "loginNumeroHint": "6 12 34 56 78",
+  "@loginNumeroHint": { "description": "Indication champ téléphone — à valider par un natif" },
+  "loginIndicatifMaroc": "+212",
+  "@loginIndicatifMaroc": { "description": "Indicatif téléphonique Maroc — à valider par un natif" },
+  "loginAideSaisie": "أدخل رقم هاتفك المهني المسجل لدى المدرسة",
+  "@loginAideSaisie": { "description": "Aide de saisie téléphone — à valider par un natif" },
+  "loginBoutonEnvoyer": "توصل برمز التحقق عبر SMS",
+  "@loginBoutonEnvoyer": { "description": "Bouton envoyer code SMS — à valider par un natif" },
+  "loginErreurTelephoneRequis": "يرجى إدخال رقم الهاتف",
+  "@loginErreurTelephoneRequis": { "description": "Erreur champ téléphone requis — à valider par un natif" },
+  "loginErreurTelephoneInvalide": "رقم الهاتف غير صالح (يجب أن يبدأ بـ 06 أو 07)",
+  "@loginErreurTelephoneInvalide": { "description": "Erreur format téléphone marocain — à valider par un natif" },
+  "loginTitreOtp": "التحقق من رمز التأكيد",
+  "@loginTitreOtp": { "description": "Titre étape vérification OTP — à valider par un natif" },
+  "loginSousTitreOtp": "أدخل الرمز السري المكون من 6 أرقام المرسل إلى {phone}",
+  "@loginSousTitreOtp": {
+    "description": "Sous-titre étape OTP avec numéro masqué — à valider par un natif",
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "loginOtpLabel": "رمز التحقق",
+  "@loginOtpLabel": { "description": "Libellé code OTP — à valider par un natif" },
+  "loginOtpHint": "000000",
+  "@loginOtpHint": { "description": "Indication code OTP — à valider par un natif" },
+  "loginBoutonValider": "تأكيد وتسجيل الدخول",
+  "@loginBoutonValider": { "description": "Bouton validation OTP — à valider par un natif" },
+  "loginBoutonModifierNumero": "تعديل الرقم",
+  "@loginBoutonModifierNumero": { "description": "Bouton modifier numéro téléphone — à valider par un natif" },
+  "loginBoutonRenvoyer": "إعادة إرسال الرمز",
+  "@loginBoutonRenvoyer": { "description": "Bouton renvoi OTP — à valider par un natif" },
+  "loginRenvoyerDans": "إعادة الإرسال بعد {seconds} ثانية",
+  "@loginRenvoyerDans": {
+    "description": "Compte à rebours renvoi OTP — à valider par un natif",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "loginErreurOtpRequis": "يرجى إدخال الرمز المكون من 6 أرقام",
+  "@loginErreurOtpRequis": { "description": "Erreur code OTP requis — à valider par un natif" },
+  "loginErreurOtpInvalide": "يجب أن يتكون الرمز من 6 أرقام بالضبط",
+  "@loginErreurOtpInvalide": { "description": "Erreur longueur OTP — à valider par un natif" },
+  "loginErreurOtpEchoue": "رمز التحقق غير صحيح أو منتهي الصلاحية. يرجى المحاولة مرة أخرى.",
+  "@loginErreurOtpEchoue": { "description": "Erreur OTP invalide ou expiré — à valider par un natif" },
+  "loginErreurUtilisateurIntrouvable": "المستخدم غير موجود. يرجى الاتصال بإدارة المؤسسة.",
+  "@loginErreurUtilisateurIntrouvable": { "description": "Erreur utilisateur 404 — à valider par un natif" },
+  "loginErreurTropDeTentatives": "محاولات كثيرة جداً. يرجى الانتظار بضع دقائق قبل إعادة المحاولة.",
+  "@loginErreurTropDeTentatives": { "description": "Erreur rate limiting 429 — à valider par un natif" },
+  "loginErreurRoleNonAutorise": "الدخول مخصص فقط لأطر المدرسة (المراقبون، أعوان الاستقبال، الإدارة).",
+  "@loginErreurRoleNonAutorise": { "description": "Erreur rôle non autorisé — à valider par un natif" },
+  "loginErreurReseau": "خطأ في الاتصال بالشبكة. يرجى التحقق من اتصالك بالإنترنت.",
+  "@loginErreurReseau": { "description": "Erreur réseau générique — à valider par un natif" },
+  "loginBadgeSecurite": "مطابق للجنة CNDP والقانون 09-08 — البيانات محمية",
+  "@loginBadgeSecurite": { "description": "Badge conformité CNDP Loi 09-08 — à valider par un natif" },
+  "loginSucces": "تم تسجيل الدخول بنجاح. مرحباً بكم!",
+  "@loginSucces": { "description": "Message de succès connexion — à valider par un natif" },
+  "loginChangerLangue": "تغيير اللغة",
+  "@loginChangerLangue": { "description": "Bouton changement langue — à valider par un natif" },
+  "roleSurveillant": "مراقب",
+  "@roleSurveillant": { "description": "Rôle surveillant — à valider par un natif" },
+  "roleAgent": "عامل استقبال",
+  "@roleAgent": { "description": "Rôle agent d'accueil — à valider par un natif" },
+  "roleDirection": "الإدارة",
+  "@roleDirection": { "description": "Rôle direction — à valider par un natif" }
 }
