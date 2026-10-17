@@ -3,7 +3,7 @@
 # ──────────────────────────────────────────────────────────────
 FROM php:8.3-fpm-alpine
 
-# Extensions requises pour PostgreSQL, Redis, GD
+# Extensions requises pour PostgreSQL, Redis, GD, Zip (Filament)
 RUN apk add --no-cache \
         postgresql-dev \
         libpng-dev \
@@ -11,6 +11,7 @@ RUN apk add --no-cache \
         libwebp-dev \
         freetype-dev \
         icu-dev \
+        libzip-dev \
         zip \
         unzip \
         git \
@@ -26,7 +27,8 @@ RUN apk add --no-cache \
         intl \
         pcntl \
         bcmath \
-        opcache
+        opcache \
+        zip
 
 # Redis extension
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \

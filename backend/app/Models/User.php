@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToSchool;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,10 +16,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
 /**
- * Modèle Utilisateur (User) — Tuteurs, surveillants, agents d'accueil, direction.
+ * Modèle Utilisateur (User) — Tuteurs, surveillants, agents d'accueil, direction, administrateurs.
  * Applique l'isolation multi-école (ADR 0005).
  */
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser
 {
     use BelongsToSchool;
     use HasApiTokens;
@@ -27,6 +29,7 @@ class User extends Authenticatable
     protected $guarded = ['id'];
 
     protected $hidden = [
+        'password',
         'remember_token',
     ];
 
@@ -36,7 +39,14 @@ class User extends Authenticatable
             'id' => 'string',
             'school_id' => 'string',
             'phone_verified_at' => 'datetime',
+            'password' => 'hashed',
         ];
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Seuls les directeurs et l'admin de l'école peuvent entrer
+        return in_array($this->role, ['director', 'admin']);
     }
 
     public function getSchoolId(): string
