@@ -33,7 +33,7 @@ class SurveillanceRepository {
     required String baseUrl,
     required String schoolId,
     required ReverbService reverbService,
-  })  : _dio = dio,
+  })  : _dio = dio ?? (ReverbService.isTestEnvironment ? null : Dio()),
         _baseUrl = baseUrl,
         _schoolId = schoolId,
         _reverbService = reverbService;
@@ -143,13 +143,11 @@ class SurveillanceRepository {
     ));
   }
 
-  void _handleDepartedEvent(PickupRequestDepartedEvent event) {
-    // Ne retenir que les événements de la même école
-    if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
-      return;
-    }
-
-    final index = _currentItems.indexWhere((i) => i.requestId == event.requestId);
+  /// Retirer une demande marquée partie de la file locale et notifier les écouteurs.
+  void removeDeparted(String requestId) {
+    final index = _currentItems.indexWhere(
+      (i) => i.requestId == requestId || i.id == requestId,
+    );
     if (index >= 0) {
       _currentItems.removeAt(index);
       _stateController.add(SurveillanceLoaded(
@@ -159,6 +157,15 @@ class SurveillanceRepository {
     }
   }
 
+  void _handleDepartedEvent(PickupRequestDepartedEvent event) {
+    // Ne retenir que les événements de la même école
+    if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
+      return;
+    }
+
+    removeDeparted(event.requestId);
+  }
+
   /// Marquer le départ d'un élève (transition class_notified -> on_the_way).
   ///
   /// Envoie POST /api/v1/schools/{schoolId}/pickup-requests/{requestId}/depart
@@ -166,7 +173,8 @@ class SurveillanceRepository {
   /// Ne modifie pas l'état local directement : la file sera mise à jour
   /// via l'écoute de l'événement WebSocket pickup.departed (B1, B4).
   Future<void> markDepart(String requestId, {String? token}) async {
-    if (_dio == null) return;
+    final dio = _dio;
+    if (dio == null) return;
 
     final effectiveToken = token ?? _authToken;
     final idempotencyKey = const Uuid().v4();
@@ -177,7 +185,7 @@ class SurveillanceRepository {
       if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
     };
 
-    await _dio.post(
+    await dio.post(
       '$_baseUrl/api/v1/schools/$_schoolId/pickup-requests/$requestId/depart',
       options: Options(headers: headers),
     );

@@ -23,9 +23,9 @@
 | backend/tests/Feature/F04/CA02F04MarkDepartTest.php | 419a5087bb49ea800008b8510204ecbaf26823c71c81b849ad147f5c20cd9167 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA03F04QueueSurveillantTest.php | 468bdfbbeb3c0a9a1e1322a8faab2662a46eceea5094f2330a7e7d92e3544e07 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA05F04ConcurrencyLockTest.php | 09d3aca02833f356fdc640ecf0ae6f710dbfc03986fc745837ac5eea4901780a | Pest / PostgreSQL |
-| backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | 13698b27633654cad1e4bd77ab376fd754f5a94e67dd924b5c175655b807df1a | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA13F04PayloadCalledTest.php | b12681af1409a64e498bfb5f63490defcb1685d878a8b4125df251990316d578 | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA16F04IsolationTest.php | 7e2552b536ac4c38b4af5f96eac1d783b3feff74d993fa251cd583b8013d37fd | Pest / PostgreSQL |
-| backend/tests/Feature/F04/CA17F04ConfidentialiteTest.php | 4dd2a3c22f1b0a6bb79060e71fb4487c981b362df8a31b73295463ce49c33b2a | Pest / PostgreSQL |
+| backend/tests/Feature/F04/CA17F04ConfidentialiteTest.php | 9429b8dd4927338b43fee87e6b76b108002cffea60fd2c46f73a83cb9baee79c | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA21F04BroadcastingAuthTest.php | 7d0773c56ab88c9390811faef985d6522d97acd3862e95ddf3ad6734543fc84e | Pest / PostgreSQL |
 | backend/tests/Feature/F04/CA23F04ConfidentialiteDepartTest.php | bacf3776aab42edd25b658ce174adefdbf7ff59cad351b209f9779a243c02741 | Pest / PostgreSQL |
 | app_ecole/test/features/surveillance/ca11_ecran_surveillant_tri_et_groupement_test.dart | aeb3b66b581c7ab5fa0acd8965aefdb3cb085121bd4f820e4d6dcebd90164eb6 | Flutter / Test |
@@ -65,6 +65,7 @@
   injecter les délégués AppLocalizations, sinon l'appel à
   AppLocalizations.of(context) dans SurveillanceScreen crash.
   Assertions métier inchangées (find.byKey sur les 3 clés).
+- Commit <SHA_FINAL> (correction F04) : ajout du child_name complet au payload broadcast (raison métier : identification de l'élève) et mise à jour des tests F04.
 
 
 

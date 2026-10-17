@@ -28,17 +28,19 @@ class SurveillanceItem extends Equatable {
 
   factory SurveillanceItem.fromJson(Map<String, dynamic> json) {
     final rawName = json['child_name'] as String? ?? '';
-    final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
+    final initial = rawName.isNotEmpty
+        ? '${rawName[0]}.'
+        : (json['child_initial'] as String? ?? '');
     final calledAtStr = (json['called_at'] ?? json['created_at']) as String?;
     final calledAt = calledAtStr != null
         ? DateTime.tryParse(calledAtStr) ?? clock.now()
         : clock.now();
 
     return SurveillanceItem(
-      requestId: json['id'] as String? ?? '',
+      requestId: json['id'] as String? ?? json['request_id'] as String? ?? '',
       childId: json['child_id'] as String? ?? '',
       childInitial: initial,
-      childName: rawName,
+      childName: rawName.isNotEmpty ? rawName : initial,
       className: json['class_name'] as String? ?? '',
       calledAt: calledAt,
       status: json['status'] as String? ?? 'class_notified',
@@ -50,7 +52,7 @@ class SurveillanceItem extends Equatable {
       requestId: event.requestId,
       childId: '',
       childInitial: event.childInitial,
-      childName: event.childInitial,
+      childName: event.childName,
       className: event.className,
       calledAt: event.receivedAt,
       status: 'class_notified',

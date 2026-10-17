@@ -33,8 +33,9 @@ passe à on_the_way, l'agent au portail peut remettre. Le micro est supprimé.
 - R10 Une demande d'une autre école renvoie 404 (jamais 403), cohérent avec
   la règle multi-école globale.
 - R11 Horodatage systématique en Africa/Casablanca explicite.
-- R12 Aucune donnée personnelle dans les payloads Reverb : identifiants
-  opaques + prénom tronqué (première lettre + « . ») + nom de classe.
+- R12 Aucune donnée personnelle sensible (téléphone, photo, GPS). Le nom
+  complet de l'enfant est diffusé sur le canal privé de l'école pour
+  permettre l'appel.
 
 ## Critères d'acceptation
 
@@ -65,17 +66,17 @@ passe à on_the_way, l'agent au portail peut remettre. Le micro est supprimé.
        par classe, triées par heure d'appel croissante.
 - CA12 L'écran surveillant ne montre AUCUNE demande hors école, ni
        handed_over / cancelled / expired.
-- CA13 Le payload Reverb de pickup.called ne contient ni nom complet, ni
-       photo, ni téléphone : uniquement request_id, school_id,
-       class_name (snapshot de child.class_name), child_initial.
+- CA13 Le payload Reverb de pickup.called ne contient aucune donnée
+       sensible (ni photo, ni téléphone, ni GPS) : uniquement request_id,
+       school_id, class_name (snapshot de child.class_name), child_name.
 - CA14 L'écran surveillant se met à jour à la réception d'un event
        pickup.called, sans polling.
 - CA15 À la reconnexion WebSocket après une coupure, l'écran recharge
        l'état complet depuis GET /queue (pas de perte silencieuse).
 - CA16 Le test d'isolation (école A vs école B) est écrit par le PO,
        pas par l'agent, et verrouillé après fusion.
-- CA17 Le test de confidentialité (payload Reverb sans donnée personnelle)
-       est écrit par le PO et verrouillé après fusion.
+- CA17 Le test de confidentialité (payload Reverb sans donnée sensible,
+       avec child_name) est écrit par le PO et verrouillé après fusion.
 - CA18 Toute transition est testée avec un cas où le lock pessimiste
        provoque une attente, pour valider le comportement sous concurrence.
 - CA19 Un POST .../depart sur une demande encore en requested est rejeté
@@ -97,8 +98,8 @@ passe à on_the_way, l'agent au portail peut remettre. Le micro est supprimé.
 Stocké : identifiants, statuts, horodatages, agent_id (appel), surveillant_id
 (départ), classroom_id au moment de l'appel.
 
-Jamais stocké : positions GPS, nom complet dans les payloads Reverb,
-téléphone du surveillant en clair dans les logs, photo.
+Jamais stocké : positions GPS, téléphone du surveillant en clair
+dans les logs, photo.
 
 ## Hors périmètre
 

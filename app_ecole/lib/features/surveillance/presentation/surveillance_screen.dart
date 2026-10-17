@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/reverb_service.dart';
 import '../data/surveillance_repository.dart';
 import '../domain/pickup_request_called_event.dart';
+import '../domain/pickup_request_departed_event.dart';
 import '../domain/surveillance_state.dart';
 import 'widgets/class_group_section.dart';
 
@@ -35,6 +38,7 @@ class SurveillanceScreen extends StatefulWidget {
 class _SurveillanceScreenState extends State<SurveillanceScreen> {
   late final SurveillanceRepository _repository;
   bool _ownsRepository = false;
+  StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
 
   @override
   void initState() {
@@ -60,10 +64,21 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     _repository.init();
     _repository.loadInitialQueue(token: widget.token);
     _repository.reverbService.connect(authToken: widget.token);
+
+    // Écouter les événements pickup.departed pour évaporer la carte en temps réel
+    _departedSubscription =
+        _repository.reverbService.departedEvents.listen((event) {
+      if (mounted) {
+        setState(() {
+          _repository.removeDeparted(event.requestId);
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
+    _departedSubscription?.cancel();
     _repository.reverbService.disconnect();
     if (_ownsRepository) {
       _repository.dispose();
@@ -209,6 +224,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                           className: entry.key,
                           items: entry.value,
                           repository: _repository,
+                          token: widget.token,
                         )),
                   ],
                 );

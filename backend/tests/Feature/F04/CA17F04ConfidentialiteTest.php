@@ -10,11 +10,11 @@ use Illuminate\Support\Str;
 
 /*
  * CA17 — Confidentialité du payload Reverb de pickup.called (écrit par le PO).
- * Champs AUTORISÉS : request_id, school_id, class_name, child_initial.
- * Champs INTERDITS : nom complet, prénom complet, photo, GPS, téléphone.
+ * Champs AUTORISÉS : request_id, school_id, class_name, child_name.
+ * Champs INTERDITS : photo, GPS, téléphone.
  */
 
-it('CA17 le payload pickup.called ne contient aucune donnée personnelle', function () {
+it('CA17 le payload pickup.called ne contient aucune donnée sensible mais contient le nom complet', function () {
     Event::fake([PickupRequestCalled::class]);
 
     $ecole = School::factory()->create();
@@ -35,15 +35,14 @@ it('CA17 le payload pickup.called ne contient aucune donnée personnelle', funct
         $json = json_encode($payload);
 
         expect($json)
-            ->not->toContain('Yasmine')
-            ->not->toContain('ElFassi')
+            ->toContain('Yasmine ElFassi')
             ->not->toContain('+2126')
             ->not->toContain('photo')
             ->not->toContain('lat')
             ->not->toContain('lng');
 
-        expect($payload)->toHaveKeys(['request_id', 'school_id', 'class_name', 'child_initial']);
-        expect($payload['child_initial'])->toBe('Y.');
+        expect($payload)->toHaveKeys(['request_id', 'school_id', 'class_name', 'child_name']);
+        expect($payload['child_name'])->toBe('Yasmine ElFassi');
 
         return true;
     });

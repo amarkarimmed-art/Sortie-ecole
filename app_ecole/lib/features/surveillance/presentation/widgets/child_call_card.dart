@@ -13,12 +13,14 @@ class ChildCallCard extends StatefulWidget {
   final SurveillanceItem item;
   final SurveillanceRepository? repository;
   final Future<void> Function(String requestId)? onDepart;
+  final String? token;
 
   const ChildCallCard({
     super.key,
     required this.item,
     this.repository,
     this.onDepart,
+    this.token,
   });
 
   @override
@@ -39,7 +41,7 @@ class _ChildCallCardState extends State<ChildCallCard> {
       if (widget.onDepart != null) {
         await widget.onDepart!(widget.item.id);
       } else if (widget.repository != null) {
-        await widget.repository!.markDepart(widget.item.id);
+        await widget.repository!.markDepart(widget.item.id, token: widget.token);
       }
       if (mounted) {
         setState(() {

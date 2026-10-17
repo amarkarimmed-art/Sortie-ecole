@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dart_pusher_channels/dart_pusher_channels.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../features/surveillance/domain/pickup_request_called_event.dart';
 import '../../features/surveillance/domain/pickup_request_departed_event.dart';
@@ -58,12 +60,19 @@ class ReverbService {
         _authUrl = authUrl ?? _defaultAuthUrl(baseUrl ?? 'ws://127.0.0.1:8080'),
         _appKey = appKey ?? 'sortie-reverb-key',
         _cluster = cluster ?? 'mt1',
-        _enableConnection = enableConnection ?? !_isTestEnvironment,
+        _enableConnection = enableConnection ?? !isTestEnvironment,
         _client = client;
 
-  static bool get _isTestEnvironment =>
-      const bool.fromEnvironment('flutter.test') ||
-      Zone.current[#test.declarer] != null;
+  static bool get isTestEnvironment {
+    if (const bool.fromEnvironment('flutter.test')) return true;
+    if (Zone.current[#test.declarer] != null) return true;
+    try {
+      if (WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 
   static String _defaultAuthUrl(String baseUrl) {
     final uri = Uri.tryParse(baseUrl);
@@ -227,16 +236,27 @@ class ReverbService {
       _rawEventController.add(raw);
 
       final eventName = event.name;
-      final eventData = event.tryGetDataAsMap() ?? {};
+      Map<String, dynamic> eventData = event.tryGetDataAsMap() ?? {};
+      if (eventData.isEmpty && event.data is String) {
+        try {
+          final decoded = jsonDecode(event.data as String);
+          if (decoded is Map<String, dynamic>) {
+            eventData = decoded;
+          }
+        } catch (_) {}
+      }
 
-      if (eventName == 'pickup.called' ||
-          eventName == '.pickup.called' ||
-          eventName == 'App\\Events\\PickupRequestCalled') {
+      final cleanName =
+          eventName.startsWith('.') ? eventName.substring(1) : eventName;
+
+      if (cleanName == 'pickup.called' ||
+          cleanName.endsWith('PickupRequestCalled') ||
+          eventName.contains('pickup.called')) {
         final calledEvent = PickupRequestCalledEvent.fromJson(eventData);
         _calledController.add(calledEvent);
-      } else if (eventName == 'pickup.departed' ||
-          eventName == '.pickup.departed' ||
-          eventName == 'App\\Events\\PickupRequestDeparted') {
+      } else if (cleanName == 'pickup.departed' ||
+          cleanName.endsWith('PickupRequestDeparted') ||
+          eventName.contains('pickup.departed')) {
         final departedEvent = PickupRequestDepartedEvent.fromJson(eventData);
         _departedController.add(departedEvent);
       }
@@ -274,6 +294,10 @@ class ReverbService {
     }
     if (_client != null) {
       await _client!.disconnect();
+      if (!_client!.isDisposed) {
+        _client!.dispose();
+      }
+      _client = null;
     }
   }
 

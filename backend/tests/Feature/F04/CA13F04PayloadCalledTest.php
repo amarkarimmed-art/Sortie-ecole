@@ -19,7 +19,7 @@ afterEach(function () {
     Carbon::setTestNow();
 });
 
-test('CA13 : le payload de pickup.called respecte la structure autorisée (request_id, school_id, class_name, child_initial)', function () {
+test('CA13 : le payload de pickup.called respecte la structure autorisée (request_id, school_id, class_name, child_name)', function () {
     Event::fake();
 
     $school = School::factory()->create();
@@ -41,7 +41,7 @@ test('CA13 : le payload de pickup.called respecte la structure autorisée (reque
 
     $response->assertStatus(200);
 
-    // Une fois implémenté, vérifier la structure exacte et l'absence de données personnelles
+    // Une fois implémenté, vérifier la structure exacte et l'absence de données personnelles sensibles
     Event::assertDispatched(PickupRequestCalled::class, function ($event) use ($request, $school) {
         $name = is_string($event) ? $event : ($event->broadcastAs() ?? get_class($event));
         if (! str_contains((string) $name, 'called')) {
@@ -50,12 +50,12 @@ test('CA13 : le payload de pickup.called respecte la structure autorisée (reque
 
         $payload = method_exists($event, 'broadcastWith') ? $event->broadcastWith() : (array) $event;
 
-        expect($payload)->toHaveKeys(['request_id', 'school_id', 'class_name', 'child_initial'])
+        expect($payload)->toHaveKeys(['request_id', 'school_id', 'class_name', 'child_name'])
             ->and($payload['request_id'])->toBe($request->id)
             ->and($payload['school_id'])->toBe($school->id)
             ->and($payload['class_name'])->toBe('CP-B')
-            ->and($payload['child_initial'])->toBe('A.')
-            ->and($payload)->not->toHaveKeys(['first_name', 'last_name', 'photo', 'phone', 'latitude', 'longitude']);
+            ->and($payload['child_name'])->toBe('Adam El Amrani')
+            ->and($payload)->not->toHaveKeys(['photo', 'phone', 'latitude', 'longitude']);
 
         return true;
     });

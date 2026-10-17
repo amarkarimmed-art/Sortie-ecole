@@ -9,16 +9,18 @@ class PickupRequestCalledEvent extends Equatable {
   final String requestId;
   final String schoolId;
   final String className;
-  final String childInitial;
+  final String childName;
   final DateTime receivedAt;
 
   const PickupRequestCalledEvent({
     required this.requestId,
     required this.schoolId,
     required this.className,
-    required this.childInitial,
+    required this.childName,
     required this.receivedAt,
   });
+
+  String get childInitial => childName.isNotEmpty ? '${childName[0]}.' : '';
 
   factory PickupRequestCalledEvent.fromJson(
     Map<String, dynamic> json, {
@@ -28,7 +30,9 @@ class PickupRequestCalledEvent extends Equatable {
       requestId: json['request_id'] as String? ?? '',
       schoolId: json['school_id'] as String? ?? '',
       className: json['class_name'] as String? ?? '',
-      childInitial: json['child_initial'] as String? ?? '',
+      childName: json['child_name'] as String? ??
+          json['child_initial'] as String? ??
+          '',
       receivedAt: receivedAt ?? clock.now(),
     );
   }
@@ -37,7 +41,7 @@ class PickupRequestCalledEvent extends Equatable {
         'request_id': requestId,
         'school_id': schoolId,
         'class_name': className,
-        'child_initial': childInitial,
+        'child_name': childName,
       };
 
   @override
@@ -45,7 +49,7 @@ class PickupRequestCalledEvent extends Equatable {
         requestId,
         schoolId,
         className,
-        childInitial,
+        childName,
         receivedAt,
       ];
 }

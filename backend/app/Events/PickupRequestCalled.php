@@ -33,12 +33,13 @@ class PickupRequestCalled implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         $child = $this->pickupRequest->child;
+        $childName = trim("{$child?->first_name} {$child?->last_name}");
 
         return [
             'request_id' => $this->pickupRequest->id,
             'school_id' => $this->pickupRequest->school_id,
             'class_name' => $child?->class_name,
-            'child_initial' => mb_substr((string) $child?->first_name, 0, 1, 'UTF-8').'.',
+            'child_name' => $childName,
         ];
     }
 }

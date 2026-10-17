@@ -13,6 +13,7 @@ class ClassGroupSection extends StatelessWidget {
   final List<SurveillanceItem> items;
   final SurveillanceRepository? repository;
   final Future<void> Function(String requestId)? onDepart;
+  final String? token;
 
   const ClassGroupSection({
     super.key,
@@ -20,6 +21,7 @@ class ClassGroupSection extends StatelessWidget {
     required this.items,
     this.repository,
     this.onDepart,
+    this.token,
   });
 
   @override
@@ -81,6 +83,7 @@ class ClassGroupSection extends StatelessWidget {
                 item: item,
                 repository: repository,
                 onDepart: onDepart,
+                token: token,
               )),
         ],
       ),
