@@ -35,7 +35,10 @@ void main() {
     secureStorage: secureStorage,
   );
 
-  final arrivalRemoteDataSource = ArrivalRemoteDataSourceImpl(dio: dio);
+  final arrivalRemoteDataSource = ArrivalRemoteDataSourceImpl(
+    dio: dio,
+    secureStorage: secureStorage,
+  );
   final arrivalRepository = ArrivalRepositoryImpl(
     remoteDataSource: arrivalRemoteDataSource,
   );

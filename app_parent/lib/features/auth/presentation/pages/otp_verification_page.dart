@@ -49,6 +49,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthAuthenticated) {
+            final schoolId = state.user.schoolId;
             // L'utilisateur est connecté et le token est persisté
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -83,7 +84,11 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                       ),
                     );
 
-                  final remoteDataSource = ArrivalRemoteDataSourceImpl(dio: dio);
+                  final remoteDataSource = ArrivalRemoteDataSourceImpl(
+                    dio: dio,
+                    schoolId: schoolId,
+                    secureStorage: secureStorage,
+                  );
                   final arrivalRepository = ArrivalRepositoryImpl(
                     remoteDataSource: remoteDataSource,
                   );
