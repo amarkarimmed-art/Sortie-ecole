@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sortie_ui/sortie_ui.dart';
+import '../../../sortie/presentation/pages/arrival_status_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -49,8 +50,12 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 backgroundColor: SortieColors.success,
               ),
             );
-            // Fermer l'écran d'auth
-            Navigator.of(context).popUntil((route) => route.isFirst);
+            // Naviguer vers l'écran d'arrivée
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => const ArrivalStatusPage(),
+              ),
+            );
           } else if (state is AuthFailure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
