@@ -1,6 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_ui/sortie_ui.dart';
+
+import '../../../sortie/data/datasources/arrival_remote_datasource.dart';
+import '../../../sortie/data/repositories/arrival_repository_impl.dart';
 import '../../../sortie/presentation/bloc/arrival_bloc.dart';
 import '../../../sortie/presentation/pages/arrival_status_page.dart';
 import '../bloc/auth_bloc.dart';
@@ -51,13 +56,45 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 backgroundColor: SortieColors.success,
               ),
             );
-            // Naviguer vers l'écran d'arrivée
+            // Naviguer vers l'écran d'arrivée avec son ArrivalBloc local
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => BlocProvider.value(
-                  value: context.read<ArrivalBloc>(),
-                  child: const ArrivalStatusPage(),
-                ),
+                builder: (_) {
+                  final secureStorage = const FlutterSecureStorage();
+                  final dio = Dio(
+                    BaseOptions(
+                      baseUrl: 'http://127.0.0.1:8000/api',
+                      connectTimeout: const Duration(seconds: 10),
+                      receiveTimeout: const Duration(seconds: 10),
+                      headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                      },
+                    ),
+                  )..interceptors.add(
+                      InterceptorsWrapper(
+                        onRequest: (options, handler) async {
+                          final token = await secureStorage.read(key: 'auth_token');
+                          if (token != null) {
+                            options.headers['Authorization'] = 'Bearer $token';
+                          }
+                          return handler.next(options);
+                        },
+                      ),
+                    );
+
+                  final remoteDataSource = ArrivalRemoteDataSourceImpl(dio: dio);
+                  final arrivalRepository = ArrivalRepositoryImpl(
+                    remoteDataSource: remoteDataSource,
+                  );
+
+                  return BlocProvider<ArrivalBloc>(
+                    create: (_) => ArrivalBloc(
+                      arrivalRepository: arrivalRepository,
+                    ),
+                    child: const ArrivalStatusPage(),
+                  );
+                },
               ),
             );
           } else if (state is AuthFailure) {
