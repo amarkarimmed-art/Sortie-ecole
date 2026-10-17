@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_ui/sortie_ui.dart';
 
@@ -53,6 +54,11 @@ class SortieParentApp extends StatelessWidget {
       child: MaterialApp(
         title: "Sortie d'école",
         theme: SortieTheme.lightTheme,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         supportedLocales: const [
           Locale('fr'),
           Locale('ar'),
