@@ -1,46 +1,39 @@
 import 'package:equatable/equatable.dart';
 
-/// Objet de Requête : ArrivalSignalRequest
+/// Objet de Requête : ArrivalSignalRequest (F03)
 ///
-/// Encapsule les coordonnées géographiques et les identifiants des enfants
-/// envoyés par le smartphone du parent lors du signalement d'arrivée (F03).
+/// Encapsule les identifiants des enfants et le statut du rayon
+/// conformément au contrat backend (Loi 09-08 : aucune coordonnée GPS brute).
 class ArrivalSignalRequest extends Equatable {
-  final double latitude;
-  final double longitude;
   final List<String> childIds;
   final bool inRadius;
   final int? distanceMeters;
 
   const ArrivalSignalRequest({
-    required this.latitude,
-    required this.longitude,
-    this.childIds = const [],
-    this.inRadius = true,
+    required this.childIds,
+    required this.inRadius,
     this.distanceMeters,
   });
 
   /// Désérialisation depuis un Map JSON.
   factory ArrivalSignalRequest.fromJson(Map<String, dynamic> json) {
     return ArrivalSignalRequest(
-      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
-      childIds: (json['child_ids'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+      childIds: (json['child_ids'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
       inRadius: json['in_radius'] as bool? ?? true,
       distanceMeters: json['distance_meters'] as int?,
     );
   }
 
   /// Sérialisation vers un Map JSON standard.
-  Map<String, dynamic> toJson() {
-    return {
-      'latitude': latitude,
-      'longitude': longitude,
-      if (childIds.isNotEmpty) 'child_ids': childIds,
-      if (childIds.isNotEmpty) 'in_radius': inRadius,
-      if (distanceMeters != null) 'distance_meters': distanceMeters,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+        'child_ids': childIds,
+        'in_radius': inRadius,
+        if (distanceMeters != null) 'distance_meters': distanceMeters,
+      };
 
   @override
-  List<Object?> get props => [latitude, longitude, childIds, inRadius, distanceMeters];
+  List<Object?> get props => [childIds, inRadius, distanceMeters];
 }

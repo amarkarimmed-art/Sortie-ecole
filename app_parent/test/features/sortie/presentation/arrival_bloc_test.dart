@@ -15,7 +15,7 @@ class MockLocationService extends Mock implements LocationService {}
 
 void main() {
   setUpAll(() {
-    registerFallbackValue(const ArrivalSignalRequest(latitude: 0, longitude: 0));
+    registerFallbackValue(const ArrivalSignalRequest(childIds: [], inRadius: true));
   });
 
   group('ArrivalBloc', () {
@@ -75,8 +75,9 @@ void main() {
         verify(
           () => mockArrivalRepository.signalArrival(
             const ArrivalSignalRequest(
-              latitude: testLatitude,
-              longitude: testLongitude,
+              childIds: [],
+              inRadius: true,
+              distanceMeters: 50,
             ),
           ),
         ).called(1);

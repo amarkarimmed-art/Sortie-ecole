@@ -24,8 +24,9 @@ void main() {
     late ArrivalRepositoryImpl repository;
 
     const testRequest = ArrivalSignalRequest(
-      latitude: 34.020882,
-      longitude: -6.841650,
+      childIds: ['550e8400-e29b-41d4-a716-446655440000'],
+      inRadius: true,
+      distanceMeters: 50,
     );
 
     setUp(() {

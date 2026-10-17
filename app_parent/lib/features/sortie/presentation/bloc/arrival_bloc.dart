@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:sortie_models/sortie_models.dart';
 
 import '../../domain/failures/arrival_exceptions.dart';
@@ -13,12 +14,18 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
   final LocationService locationService;
   final List<String> childIds;
   final FlutterSecureStorage? secureStorage;
+  final double? schoolLatitude;
+  final double? schoolLongitude;
+  final double radiusMeters;
 
   ArrivalBloc({
     required this.arrivalRepository,
     LocationService? locationService,
     this.childIds = const [],
     this.secureStorage,
+    this.schoolLatitude,
+    this.schoolLongitude,
+    this.radiusMeters = 250.0,
   })  : locationService = locationService ?? GeolocatorLocationService(),
         super(const ArrivalInitial()) {
     on<SignalArrivalRequested>(_onSignalArrivalRequested);
@@ -50,12 +57,31 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
         }
       }
 
-      // 4. Appeler le repository d'arrivée
+      // Calcul de la distance et du rayon
+      int? distanceMeters;
+      bool inRadius = true;
+
+      if (schoolLatitude != null && schoolLongitude != null) {
+        final distance = Geolocator.distanceBetween(
+          coords.latitude,
+          coords.longitude,
+          schoolLatitude!,
+          schoolLongitude!,
+        );
+        // Loi 09-08 : distance arrondie aux 10m supérieurs
+        distanceMeters = (distance / 10).ceil() * 10;
+        inRadius = distance <= radiusMeters;
+      } else {
+        // Mode dev / fallback sans coordonnées d'école
+        distanceMeters = 50;
+        inRadius = true;
+      }
+
+      // 4. Appeler le repository d'arrivée avec le contrat backend strict
       final request = ArrivalSignalRequest(
-        latitude: coords.latitude,
-        longitude: coords.longitude,
         childIds: effectiveChildIds,
-        inRadius: true,
+        inRadius: inRadius,
+        distanceMeters: distanceMeters,
       );
 
       final response = await arrivalRepository.signalArrival(request);

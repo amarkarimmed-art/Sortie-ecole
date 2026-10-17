@@ -28,15 +28,9 @@ class ArrivalRemoteDataSourceImpl implements ArrivalRemoteDataSource {
         ? '/v1/schools/$resolvedSchoolId/arrivals'
         : '/v1/arrivals';
 
-    final payload = {
-      'child_ids': request.childIds,
-      'in_radius': request.inRadius,
-      if (request.distanceMeters != null) 'distance_meters': request.distanceMeters,
-    };
-
     final response = await dio.post(
       path,
-      data: payload,
+      data: request.toJson(),
     );
 
     return ArrivalResponse.fromJson(response.data as Map<String, dynamic>);

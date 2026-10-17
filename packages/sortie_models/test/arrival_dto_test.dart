@@ -3,39 +3,46 @@ import 'package:sortie_models/sortie_models.dart';
 
 void main() {
   group('ArrivalSignalRequest', () {
-    test('sérialisation et désérialisation avec coordonnées GPS de Rabat/Salé', () {
-      // Coordonnées GPS réelles (Rabat / Salé, Maroc)
-      const latitude = 34.020882;
-      const longitude = -6.841650;
+    test('sérialisation et désérialisation avec child_ids, in_radius et distance_meters', () {
+      const childIds = ['dfe9382a-d28b-4896-8b0c-816ec6ac49b5'];
+      const inRadius = true;
+      const distanceMeters = 50;
 
-      final request = const ArrivalSignalRequest(
-        latitude: latitude,
-        longitude: longitude,
+      const request = ArrivalSignalRequest(
+        childIds: childIds,
+        inRadius: inRadius,
+        distanceMeters: distanceMeters,
       );
 
-      // Sérialisation vers JSON
       final json = request.toJson();
       expect(json, {
-        'latitude': latitude,
-        'longitude': longitude,
+        'child_ids': childIds,
+        'in_radius': inRadius,
+        'distance_meters': distanceMeters,
       });
 
-      // Désérialisation depuis JSON
       final fromJson = ArrivalSignalRequest.fromJson(json);
-      expect(fromJson.latitude, equals(latitude));
-      expect(fromJson.longitude, equals(longitude));
+      expect(fromJson.childIds, equals(childIds));
+      expect(fromJson.inRadius, equals(inRadius));
+      expect(fromJson.distanceMeters, equals(distanceMeters));
       expect(fromJson, equals(request));
     });
 
-    test('gère correctement les coordonnées envoyées sous forme de nombres entiers', () {
-      final json = {
-        'latitude': 34,
-        'longitude': -7,
-      };
+    test('sérialisation sans distance_meters (null)', () {
+      const childIds = ['dfe9382a-d28b-4896-8b0c-816ec6ac49b5'];
+      const inRadius = false;
 
-      final request = ArrivalSignalRequest.fromJson(json);
-      expect(request.latitude, equals(34.0));
-      expect(request.longitude, equals(-7.0));
+      const request = ArrivalSignalRequest(
+        childIds: childIds,
+        inRadius: inRadius,
+      );
+
+      final json = request.toJson();
+      expect(json, {
+        'child_ids': childIds,
+        'in_radius': inRadius,
+      });
+      expect(json.containsKey('distance_meters'), isFalse);
     });
   });
 
