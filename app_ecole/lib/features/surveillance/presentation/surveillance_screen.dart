@@ -18,12 +18,14 @@ class SurveillanceScreen extends StatefulWidget {
   final SurveillanceRepository? repository;
   final ReverbService? reverbService;
   final String? token;
+  final String? schoolId;
 
   const SurveillanceScreen({
     super.key = const Key('ecran_surveillance'),
     this.repository,
     this.reverbService,
     this.token,
+    this.schoolId,
   });
 
   @override
@@ -37,17 +39,19 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   @override
   void initState() {
     super.initState();
+    final effectiveSchoolId =
+        widget.schoolId ?? 'a3000c08-8f84-4bff-8c3f-81ebf2b014dd';
     if (widget.repository != null) {
       _repository = widget.repository!;
     } else {
       final reverb = widget.reverbService ??
           ReverbService(
-            baseUrl: 'ws://localhost:8080',
-            schoolId: 'default-school',
+            baseUrl: 'ws://127.0.0.1:8080',
+            schoolId: effectiveSchoolId,
           );
       _repository = SurveillanceRepository(
-        baseUrl: 'http://localhost:8000',
-        schoolId: 'default-school',
+        baseUrl: 'http://127.0.0.1:8000',
+        schoolId: effectiveSchoolId,
         reverbService: reverb,
       );
       _ownsRepository = true;
@@ -78,11 +82,13 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
         title: Text(l10n.ecranSurveillanceTitre),
         actions: [
           // Indicateur de resynchronisation / état WS (CA15)
-          StreamBuilder<void>(
+          StreamBuilder<bool>(
             key: const Key('ecran_surveillance_resync'),
-            stream: _repository.reverbService.resyncStream,
+            stream: _repository.reverbService.connectionStream,
+            initialData: _repository.reverbService.isConnected,
             builder: (context, snapshot) {
-              final isConnected = _repository.reverbService.isConnected;
+              final isConnected =
+                  snapshot.data ?? _repository.reverbService.isConnected;
               return Padding(
                 padding: const EdgeInsetsDirectional.only(end: 16.0),
                 child: Row(

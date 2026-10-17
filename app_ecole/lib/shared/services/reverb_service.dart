@@ -19,6 +19,7 @@ class ReverbService {
   final String _schoolId;
   final String _authUrl;
   final String _appKey;
+  final String _cluster;
   final bool _enableConnection;
 
   PusherChannelsClient? _client;
@@ -28,6 +29,9 @@ class ReverbService {
 
   bool _isConnected = false;
   bool _wasPreviouslyConnected = false;
+
+  final StreamController<bool> _connectionController =
+      StreamController<bool>.broadcast();
 
   final StreamController<PickupRequestCalledEvent> _calledController =
       StreamController<PickupRequestCalledEvent>.broadcast();
@@ -42,16 +46,18 @@ class ReverbService {
       StreamController<Map<String, dynamic>>.broadcast();
 
   ReverbService({
-    required String baseUrl,
+    String? baseUrl,
     required String schoolId,
     String? authUrl,
     String? appKey,
+    String? cluster,
     bool? enableConnection,
     PusherChannelsClient? client,
-  })  : _baseUrl = baseUrl,
+  })  : _baseUrl = baseUrl ?? 'ws://127.0.0.1:8080',
         _schoolId = schoolId,
-        _authUrl = authUrl ?? _defaultAuthUrl(baseUrl),
+        _authUrl = authUrl ?? _defaultAuthUrl(baseUrl ?? 'ws://127.0.0.1:8080'),
         _appKey = appKey ?? 'sortie-reverb-key',
+        _cluster = cluster ?? 'mt1',
         _enableConnection = enableConnection ?? !_isTestEnvironment,
         _client = client;
 
@@ -61,7 +67,9 @@ class ReverbService {
 
   static String _defaultAuthUrl(String baseUrl) {
     final uri = Uri.tryParse(baseUrl);
-    final host = (uri != null && uri.host.isNotEmpty) ? uri.host : 'localhost';
+    final host = (uri != null && uri.host.isNotEmpty)
+        ? (uri.host == 'localhost' ? '127.0.0.1' : uri.host)
+        : '127.0.0.1';
     final scheme = (uri != null && (uri.scheme == 'wss' || uri.scheme == 'https'))
         ? 'https'
         : 'http';
@@ -79,9 +87,12 @@ class ReverbService {
   static String _resolveHost(String baseUrl) {
     final uri = Uri.tryParse(baseUrl);
     if (uri != null && uri.host.isNotEmpty) {
+      if (uri.host == 'localhost') {
+        return '127.0.0.1';
+      }
       return uri.host;
     }
-    return 'localhost';
+    return '127.0.0.1';
   }
 
   static int _resolvePort(String baseUrl) {
@@ -92,7 +103,7 @@ class ReverbService {
     return 8080;
   }
 
-  /// URL de base Reverb (ex: ws://localhost:8080).
+  /// URL de base Reverb (ex: ws://127.0.0.1:8080).
   String get baseUrl => _baseUrl;
 
   /// URL d'authentification Laravel Broadcasting.
@@ -100,6 +111,9 @@ class ReverbService {
 
   /// Clé d'application Pusher / Reverb.
   String get appKey => _appKey;
+
+  /// Cluster Pusher (défaut 'mt1').
+  String get cluster => _cluster;
 
   /// Indique si la connexion réseau réelle est activée.
   bool get enableConnection => _enableConnection;
@@ -109,6 +123,9 @@ class ReverbService {
 
   /// Nom du canal privé par école.
   String get channelName => 'private-school.$_schoolId.queue';
+
+  /// Flux d'état de connexion WebSocket (true = connecté, false = déconnecté).
+  Stream<bool> get connectionStream => _connectionController.stream;
 
   /// Flux des événements pickup.called (sans polling, CA14).
   Stream<PickupRequestCalledEvent> get calledEvents => _calledController.stream;
@@ -133,17 +150,28 @@ class ReverbService {
     }
 
     try {
-      final options = PusherChannelsOptions.fromHost(
-        scheme: _resolveWsScheme(_baseUrl),
-        host: _resolveHost(_baseUrl),
-        port: _resolvePort(_baseUrl),
-        key: _appKey,
+      final host = _resolveHost(_baseUrl);
+      final port = _resolvePort(_baseUrl);
+      final scheme = _resolveWsScheme(_baseUrl);
+
+      final options = PusherChannelsOptions.custom(
+        uriResolver: (metadata) => Uri(
+          scheme: scheme,
+          host: host,
+          port: port,
+          path: '/app/$_appKey',
+          queryParameters: {
+            ...metadata.getQueryParameters(),
+            'cluster': _cluster,
+          },
+        ),
       );
 
       _client ??= PusherChannelsClient.websocket(
         options: options,
         connectionErrorHandler: (exception, trace, refresh) {
           _isConnected = false;
+          _connectionController.add(false);
         },
       );
 
@@ -151,6 +179,7 @@ class ReverbService {
       _lifecycleSubscription = _client!.lifecycleStream.listen((state) {
         if (state == PusherChannelsClientLifeCycleState.establishedConnection) {
           _isConnected = true;
+          _connectionController.add(true);
           if (_wasPreviouslyConnected) {
             _resyncController.add(null);
           }
@@ -159,6 +188,7 @@ class ReverbService {
         } else if (state == PusherChannelsClientLifeCycleState.disconnected ||
             state == PusherChannelsClientLifeCycleState.connectionError) {
           _isConnected = false;
+          _connectionController.add(false);
         }
       });
 
@@ -186,6 +216,7 @@ class ReverbService {
       _privateChannel!.subscribeIfNotUnsubscribed();
     } catch (_) {
       _isConnected = false;
+      _connectionController.add(false);
     }
   }
 
@@ -232,6 +263,7 @@ class ReverbService {
   /// Se déconnecter proprement.
   Future<void> disconnect() async {
     _isConnected = false;
+    _connectionController.add(false);
     await _channelEventsSubscription?.cancel();
     _channelEventsSubscription = null;
     await _lifecycleSubscription?.cancel();
@@ -255,5 +287,6 @@ class ReverbService {
     await _departedController.close();
     await _resyncController.close();
     await _rawEventController.close();
+    await _connectionController.close();
   }
 }
