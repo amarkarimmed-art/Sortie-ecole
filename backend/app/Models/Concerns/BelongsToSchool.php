@@ -32,6 +32,11 @@ use Illuminate\Support\Facades\Auth;
 trait BelongsToSchool
 {
     /**
+     * Drapeau anti-récursion pour la résolution de l'utilisateur authentifié.
+     */
+    public static bool $isResolvingSchool = false;
+
+    /**
      * Boot du trait — enregistrement du scope global.
      */
     public static function bootBelongsToSchool(): void
@@ -40,29 +45,61 @@ trait BelongsToSchool
         {
             public function apply(Builder $builder, Model $model): void
             {
-                $user = Auth::user();
+                if (BelongsToSchool::$isResolvingSchool) {
+                    return;
+                }
 
-                if ($user && method_exists($user, 'getSchoolId')) {
-                    $schoolId = $user->getSchoolId();
-                    if (!empty($schoolId)) {
-                        $builder->where(
-                            $model->getTable().'.school_id',
-                            $schoolId
-                        );
+                try {
+                    if (request()?->is('admin/login*')) {
+                        return;
                     }
+                } catch (\Throwable) {
+                    // Hors contexte HTTP
+                }
+
+                BelongsToSchool::$isResolvingSchool = true;
+
+                try {
+                    $user = Auth::user();
+
+                    if ($user && method_exists($user, 'getSchoolId')) {
+                        $schoolId = $user->getSchoolId();
+                        if (!empty($schoolId)) {
+                            $builder->where(
+                                $model->getTable().'.school_id',
+                                $schoolId
+                            );
+                        }
+                    }
+                } catch (\Throwable) {
+                    // Session guard non prêt ou contexte console
+                } finally {
+                    BelongsToSchool::$isResolvingSchool = false;
                 }
             }
         });
 
         // Auto-assigner school_id à la création
         static::creating(function (Model $model): void {
-            $user = Auth::user();
+            if (BelongsToSchool::$isResolvingSchool) {
+                return;
+            }
 
-            if ($user && method_exists($user, 'getSchoolId') && empty($model->school_id)) {
-                $schoolId = $user->getSchoolId();
-                if (!empty($schoolId)) {
-                    $model->school_id = $schoolId;
+            BelongsToSchool::$isResolvingSchool = true;
+
+            try {
+                $user = Auth::user();
+
+                if ($user && method_exists($user, 'getSchoolId') && empty($model->school_id)) {
+                    $schoolId = $user->getSchoolId();
+                    if (!empty($schoolId)) {
+                        $model->school_id = $schoolId;
+                    }
                 }
+            } catch (\Throwable) {
+                // Contexte non authentifié
+            } finally {
+                BelongsToSchool::$isResolvingSchool = false;
             }
         });
     }
