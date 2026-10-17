@@ -9,6 +9,9 @@ import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/pages/phone_input_page.dart';
+import 'features/sortie/data/datasources/arrival_remote_datasource.dart';
+import 'features/sortie/data/repositories/arrival_repository_impl.dart';
+import 'features/sortie/presentation/bloc/arrival_bloc.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,25 +35,40 @@ void main() {
     secureStorage: secureStorage,
   );
 
+  final arrivalRemoteDataSource = ArrivalRemoteDataSourceImpl(dio: dio);
+  final arrivalRepository = ArrivalRepositoryImpl(
+    remoteDataSource: arrivalRemoteDataSource,
+  );
+
   runApp(
     SortieParentApp(
       authRepository: authRepository,
+      arrivalRepository: arrivalRepository,
     ),
   );
 }
 
 class SortieParentApp extends StatelessWidget {
   final AuthRepositoryImpl authRepository;
+  final ArrivalRepositoryImpl arrivalRepository;
 
   const SortieParentApp({
     super.key,
     required this.authRepository,
+    required this.arrivalRepository,
   });
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AuthBloc(authRepository: authRepository),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<AuthBloc>(
+          create: (_) => AuthBloc(authRepository: authRepository),
+        ),
+        BlocProvider<ArrivalBloc>(
+          create: (_) => ArrivalBloc(arrivalRepository: arrivalRepository),
+        ),
+      ],
       child: MaterialApp(
         title: "Sortie d'école",
         theme: SortieTheme.lightTheme,

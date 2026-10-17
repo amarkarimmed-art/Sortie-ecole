@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sortie_ui/sortie_ui.dart';
+import '../../../sortie/presentation/bloc/arrival_bloc.dart';
 import '../../../sortie/presentation/pages/arrival_status_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
@@ -53,7 +54,10 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
             // Naviguer vers l'écran d'arrivée
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => const ArrivalStatusPage(),
+                builder: (_) => BlocProvider.value(
+                  value: context.read<ArrivalBloc>(),
+                  child: const ArrivalStatusPage(),
+                ),
               ),
             );
           } else if (state is AuthFailure) {
