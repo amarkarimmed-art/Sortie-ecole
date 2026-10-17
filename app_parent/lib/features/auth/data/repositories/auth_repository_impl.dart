@@ -10,6 +10,7 @@ class AuthRepositoryImpl implements AuthRepository {
   static const String _tokenKey = 'auth_token';
   static const String _userIdKey = 'auth_user_id';
   static const String _schoolIdKey = 'auth_school_id';
+  static const String _childIdsKey = 'auth_child_ids';
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
@@ -27,6 +28,8 @@ class AuthRepositoryImpl implements AuthRepository {
     await secureStorage.write(key: _tokenKey, value: response.token);
     await secureStorage.write(key: _userIdKey, value: response.user.id);
     await secureStorage.write(key: _schoolIdKey, value: response.user.schoolId);
+    final childIds = response.user.children.map((c) => c.id).join(',');
+    await secureStorage.write(key: _childIdsKey, value: childIds);
     return response;
   }
 
@@ -40,5 +43,6 @@ class AuthRepositoryImpl implements AuthRepository {
     await secureStorage.delete(key: _tokenKey);
     await secureStorage.delete(key: _userIdKey);
     await secureStorage.delete(key: _schoolIdKey);
+    await secureStorage.delete(key: _childIdsKey);
   }
 }

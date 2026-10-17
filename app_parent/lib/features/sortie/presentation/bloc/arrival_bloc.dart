@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_models/sortie_models.dart';
 
 import '../../domain/failures/arrival_exceptions.dart';
@@ -10,10 +11,14 @@ import 'arrival_state.dart';
 class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
   final ArrivalRepository arrivalRepository;
   final LocationService locationService;
+  final List<String> childIds;
+  final FlutterSecureStorage? secureStorage;
 
   ArrivalBloc({
     required this.arrivalRepository,
     LocationService? locationService,
+    this.childIds = const [],
+    this.secureStorage,
   })  : locationService = locationService ?? GeolocatorLocationService(),
         super(const ArrivalInitial()) {
     on<SignalArrivalRequested>(_onSignalArrivalRequested);
@@ -37,10 +42,20 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
         longitude: coords.longitude,
       ));
 
+      List<String> effectiveChildIds = List<String>.from(childIds);
+      if (effectiveChildIds.isEmpty && secureStorage != null) {
+        final stored = await secureStorage?.read(key: 'auth_child_ids');
+        if (stored != null && stored.isNotEmpty) {
+          effectiveChildIds = stored.split(',').where((id) => id.isNotEmpty).toList();
+        }
+      }
+
       // 4. Appeler le repository d'arrivée
       final request = ArrivalSignalRequest(
         latitude: coords.latitude,
         longitude: coords.longitude,
+        childIds: effectiveChildIds,
+        inRadius: true,
       );
 
       final response = await arrivalRepository.signalArrival(request);

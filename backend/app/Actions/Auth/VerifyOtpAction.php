@@ -61,7 +61,7 @@ class VerifyOtpAction extends BaseAction
         // 7. Émettre le token Sanctum (CA3)
         $token = $user->createToken('mobile')->plainTextToken;
 
-        // 8. Retourner token + user + école (Q3 : mono-école, school_id inclus)
+        // 8. Retourner token + user + école (Q3 : mono-école, school_id inclus) + enfants
         return [
             'token' => $token,
             'user' => [
@@ -71,6 +71,14 @@ class VerifyOtpAction extends BaseAction
                 'role' => $user->role,
                 'locale' => $user->locale,
                 'school_id' => $user->school_id,
+                'children' => $user->children->map(fn ($child) => [
+                    'id' => (string) $child->id,
+                    'school_id' => (string) $child->school_id,
+                    'first_name' => (string) $child->first_name,
+                    'last_name' => (string) $child->last_name,
+                    'class_name' => (string) $child->class_name,
+                    'photo_url' => $child->photo_path,
+                ])->values()->all(),
             ],
         ];
     }

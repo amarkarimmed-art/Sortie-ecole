@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'child.dart';
 
 class UserDto extends Equatable {
   final String id;
@@ -7,6 +8,7 @@ class UserDto extends Equatable {
   final String role;
   final String locale;
   final String schoolId;
+  final List<ChildDto> children;
 
   const UserDto({
     required this.id,
@@ -15,6 +17,7 @@ class UserDto extends Equatable {
     required this.role,
     required this.locale,
     required this.schoolId,
+    this.children = const [],
   });
 
   factory UserDto.fromJson(Map<String, dynamic> json) {
@@ -25,6 +28,10 @@ class UserDto extends Equatable {
       role: json['role'] as String,
       locale: json['locale'] as String? ?? 'fr',
       schoolId: json['school_id'] as String,
+      children: (json['children'] as List<dynamic>?)
+              ?.map((c) => ChildDto.fromJson(c as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -36,9 +43,10 @@ class UserDto extends Equatable {
       'role': role,
       'locale': locale,
       'school_id': schoolId,
+      'children': children.map((c) => c.toJson()).toList(),
     };
   }
 
   @override
-  List<Object?> get props => [id, name, phone, role, locale, schoolId];
+  List<Object?> get props => [id, name, phone, role, locale, schoolId, children];
 }

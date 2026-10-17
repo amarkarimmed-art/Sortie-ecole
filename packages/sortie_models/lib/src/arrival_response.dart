@@ -21,7 +21,7 @@ class ArrivalResponse extends Equatable {
   factory ArrivalResponse.fromJson(Map<String, dynamic> json) {
     return ArrivalResponse(
       id: json['id'] as String,
-      status: json['status'] as String,
+      status: json['status'] as String? ?? 'processed',
       textAr: json['text_ar'] as String?,
       textFr: json['text_fr'] as String?,
     );

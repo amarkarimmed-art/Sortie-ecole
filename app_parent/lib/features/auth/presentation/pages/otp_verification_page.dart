@@ -50,6 +50,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
         listener: (context, state) {
           if (state is AuthAuthenticated) {
             final schoolId = state.user.schoolId;
+            final childIds = state.user.children.map((c) => c.id).toList();
             // L'utilisateur est connecté et le token est persisté
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -96,6 +97,8 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                   return BlocProvider<ArrivalBloc>(
                     create: (_) => ArrivalBloc(
                       arrivalRepository: arrivalRepository,
+                      childIds: childIds,
+                      secureStorage: secureStorage,
                     ),
                     child: const ArrivalStatusPage(),
                   );

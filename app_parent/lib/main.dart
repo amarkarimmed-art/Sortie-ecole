@@ -69,7 +69,10 @@ class SortieParentApp extends StatelessWidget {
           create: (_) => AuthBloc(authRepository: authRepository),
         ),
         BlocProvider<ArrivalBloc>(
-          create: (_) => ArrivalBloc(arrivalRepository: arrivalRepository),
+          create: (_) => ArrivalBloc(
+            arrivalRepository: arrivalRepository,
+            secureStorage: authRepository.secureStorage,
+          ),
         ),
       ],
       child: MaterialApp(
