@@ -36,12 +36,10 @@ class SortieEcoleApp extends StatelessWidget {
         Locale('ar'),
       ],
       initialRoute: initialRoute,
+      home: const SurveillanceScreen(
+        token: '<TOKEN>',
+      ),
       routes: {
-        '/': (context) => Scaffold(
-              body: Center(
-                child: Text(AppLocalizations.of(context)!.appTitle),
-              ),
-            ),
         '/surveillance': (context) {
           final token = ModalRoute.of(context)?.settings.arguments as String?;
           return SurveillanceScreen(token: token);
