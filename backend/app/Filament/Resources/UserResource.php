@@ -46,6 +46,7 @@ class UserResource extends Resource
                         'concierge' => 'Concierge',
                         'surveillant' => 'Surveillant',
                         'director' => 'Directeur',
+                        'admin' => 'Administrateur',
                     ])
                     ->required(),
                 Forms\Components\Select::make('children')

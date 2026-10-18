@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin',
                 'phone' => '+212600000000',
-                'password' => Hash::make('password'),
+                'password' => 'password',
                 'role' => 'admin',
                 'school_id' => $school->id,
             ]
