@@ -29,13 +29,16 @@ use Illuminate\Support\Facades\Auth;
  * justification explicite en commentaire d'architecture
  * (règle .agents/rules/regles_agent_style_laravel_backend.md).
  */
+/**
+ * État d'anti-récursion pour le scope global multi-établissement.
+ */
+class SchoolScopeState
+{
+    public static bool $isResolving = false;
+}
+
 trait BelongsToSchool
 {
-    /**
-     * Drapeau anti-récursion pour la résolution de l'utilisateur authentifié.
-     */
-    public static bool $isResolvingSchool = false;
-
     /**
      * Boot du trait — enregistrement du scope global.
      */
@@ -45,7 +48,7 @@ trait BelongsToSchool
         {
             public function apply(Builder $builder, Model $model): void
             {
-                if (BelongsToSchool::$isResolvingSchool) {
+                if (SchoolScopeState::$isResolving) {
                     return;
                 }
 
@@ -57,7 +60,7 @@ trait BelongsToSchool
                     // Hors contexte HTTP
                 }
 
-                BelongsToSchool::$isResolvingSchool = true;
+                SchoolScopeState::$isResolving = true;
 
                 try {
                     $user = Auth::user();
@@ -74,18 +77,18 @@ trait BelongsToSchool
                 } catch (\Throwable) {
                     // Session guard non prêt ou contexte console
                 } finally {
-                    BelongsToSchool::$isResolvingSchool = false;
+                    SchoolScopeState::$isResolving = false;
                 }
             }
         });
 
         // Auto-assigner school_id à la création
         static::creating(function (Model $model): void {
-            if (BelongsToSchool::$isResolvingSchool) {
+            if (SchoolScopeState::$isResolving) {
                 return;
             }
 
-            BelongsToSchool::$isResolvingSchool = true;
+            SchoolScopeState::$isResolving = true;
 
             try {
                 $user = Auth::user();
@@ -99,7 +102,7 @@ trait BelongsToSchool
             } catch (\Throwable) {
                 // Contexte non authentifié
             } finally {
-                BelongsToSchool::$isResolvingSchool = false;
+                SchoolScopeState::$isResolving = false;
             }
         });
     }
