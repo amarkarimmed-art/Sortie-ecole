@@ -19,9 +19,22 @@ class School extends Model
 
     protected $guarded = ['id'];
 
+    protected function casts(): array
+    {
+        return [
+            'gate_latitude' => 'float',
+            'gate_longitude' => 'float',
+        ];
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function parents(): HasMany
+    {
+        return $this->hasMany(User::class)->where('role', 'parent');
     }
 
     public function children(): HasMany

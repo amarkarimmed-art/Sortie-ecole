@@ -53,7 +53,7 @@ trait BelongsToSchool
                 }
 
                 try {
-                    if (request()?->is('admin/login*')) {
+                    if (request()?->is('admin/login*', 'super-admin*')) {
                         return;
                     }
                 } catch (\Throwable) {
@@ -86,6 +86,14 @@ trait BelongsToSchool
         static::creating(function (Model $model): void {
             if (SchoolScopeState::$isResolving) {
                 return;
+            }
+
+            try {
+                if (request()?->is('super-admin*')) {
+                    return;
+                }
+            } catch (\Throwable) {
+                // Hors contexte HTTP
             }
 
             SchoolScopeState::$isResolving = true;

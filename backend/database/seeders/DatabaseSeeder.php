@@ -35,6 +35,18 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        // 3. Compte Super-Admin
+        User::updateOrCreate(
+            ['email' => 'superadmin@sortie-ecole.ma'],
+            [
+                'name' => 'Super Admin',
+                'phone' => '+212600000001',
+                'password' => 'password',
+                'role' => 'admin',
+                'school_id' => $school->id,
+            ]
+        );
+
         // 3. Classes initiales pour le back-office Filament
         foreach (['CP A', 'CP B', 'CE1 A', 'CE2 A'] as $className) {
             SchoolClass::firstOrCreate([

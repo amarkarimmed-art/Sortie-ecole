@@ -45,7 +45,12 @@ class User extends Authenticatable implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Seuls les directeurs et l'admin de l'école peuvent entrer
+        // Seul le rôle 'admin' accède au super-admin
+        if ($panel->getId() === 'super-admin') {
+            return $this->role === 'admin';
+        }
+
+        // Les directeurs et admins accèdent au panneau 'admin' (école)
         return in_array($this->role, ['director', 'admin']);
     }
 
