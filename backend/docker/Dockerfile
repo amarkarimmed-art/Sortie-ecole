@@ -44,9 +44,18 @@ COPY docker/php.ini /usr/local/etc/php/conf.d/99-sortie.ini
 
 WORKDIR /var/www
 
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-scripts \
+    --no-autoloader \
+    --no-interaction \
+    --prefer-dist \
+    --no-progress
+
 COPY . .
 
-RUN composer install --optimize-autoloader --no-interaction 2>/dev/null || true
+RUN composer dump-autoload --optimize --no-interaction
 
 EXPOSE 9000
 
