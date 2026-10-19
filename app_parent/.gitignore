@@ -1,0 +1,34 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Android
+android/local.properties
+android/app/src/main/java/
+android/.gradle/
+**/android/**/gradle-wrapper.jar
+**/android/gradlew
+**/android/gradlew.bat
+**/android/**/GeneratedPluginRegistrant.java
+
+# iOS
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/
+ios/Runner/GeneratedPluginRegistrant.*
+**/ios/**/Pods/
+**/ios/**/.symbols/
+**/ios/**/DerivedData/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

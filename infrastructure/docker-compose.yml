@@ -1,63 +1,78 @@
 # ──────────────────────────────────────────────────────────────
 # Sortie d'école — Docker Compose (Développement)
 # ──────────────────────────────────────────────────────────────
-# Services : app (Laravel API), postgresql, redis, reverb,
-#            minio, nginx, filament (admin)
+# Services : app (Laravel API), worker, scheduler, postgresql,
+#            redis, reverb, minio, nginx
 # Les apps Flutter sont compilées localement (pas dans Docker).
 # ──────────────────────────────────────────────────────────────
 
 name: sortie-ecole
 
+x-app-base: &app-base
+  build:
+    context: ../backend
+    dockerfile: docker/Dockerfile
+  restart: unless-stopped
+  working_dir: /var/www
+  volumes:
+    - ../backend:/var/www
+    - vendor_app:/var/www/vendor
+  environment:
+    APP_ENV: local
+    APP_DEBUG: "true"
+    DB_CONNECTION: pgsql
+    DB_HOST: postgresql
+    DB_PORT: 5432
+    DB_DATABASE: sortie_ecole
+    DB_USERNAME: sortie
+    DB_PASSWORD: secret
+    REDIS_HOST: redis
+    REDIS_PORT: 6379
+    CACHE_DRIVER: redis
+    QUEUE_CONNECTION: redis
+    SESSION_DRIVER: redis
+    REVERB_HOST: reverb
+    REVERB_PORT: 8080
+    FILESYSTEM_DISK: minio
+    AWS_ENDPOINT: http://minio:9000
+    AWS_ACCESS_KEY_ID: sortie-minio
+    AWS_SECRET_ACCESS_KEY: sortie-minio-secret
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_BUCKET: photos
+    AWS_USE_PATH_STYLE_ENDPOINT: "true"
+  dns:
+    - 8.8.8.8
+  extra_hosts:
+    - "repo.packagist.org:143.244.56.56"
+    - "packagist.org:185.93.2.244"
+    - "github.com:140.82.121.4"
+    - "api.github.com:140.82.121.6"
+    - "codeload.github.com:140.82.121.9"
+  depends_on:
+    postgresql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - sortie-net
+
 services:
   # ── Laravel API ──────────────────────────────────────────────
   app:
-    build:
-      context: ../backend
-      dockerfile: docker/Dockerfile
+    <<: *app-base
     container_name: sortie-app
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - C:/prog/Sortie-ecole/backend:/var/www
-      - vendor_app:/var/www/vendor
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      DB_CONNECTION: pgsql
-      DB_HOST: postgresql
-      DB_PORT: 5432
-      DB_DATABASE: sortie_ecole
-      DB_USERNAME: sortie
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      CACHE_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: redis
-      REVERB_HOST: reverb
-      REVERB_PORT: 8080
-      FILESYSTEM_DISK: minio
-      AWS_ENDPOINT: http://minio:9000
-      AWS_ACCESS_KEY_ID: sortie-minio
-      AWS_SECRET_ACCESS_KEY: sortie-minio-secret
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_BUCKET: photos
-      AWS_USE_PATH_STYLE_ENDPOINT: "true"
-    dns:
-      - 8.8.8.8
-    extra_hosts:
-      - "repo.packagist.org:143.244.56.56"
-      - "packagist.org:185.93.2.244"
-      - "github.com:140.82.121.4"
-      - "api.github.com:140.82.121.6"
-      - "codeload.github.com:140.82.121.9"
-    depends_on:
-      postgresql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - sortie-net
+
+  # ── Queue Worker ─────────────────────────────────────────────
+  worker:
+    <<: *app-base
+    container_name: sortie-worker
+    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+
+  # ── Task Scheduler ───────────────────────────────────────────
+  scheduler:
+    <<: *app-base
+    container_name: sortie-scheduler
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
 
   # ── PostgreSQL 16 ───────────────────────────────────────────
   postgresql:
@@ -107,7 +122,7 @@ services:
     working_dir: /var/www
     command: php artisan reverb:start --host=0.0.0.0 --port=8080
     volumes:
-      - C:/prog/Sortie-ecole/backend:/var/www
+      - ../backend:/var/www
       - vendor_app:/var/www/vendor
     environment:
       APP_ENV: local
@@ -158,43 +173,9 @@ services:
       - "8443:443"
     volumes:
       - ./nginx_config:/etc/nginx/conf.d:ro
-      - C:/prog/Sortie-ecole/backend/public:/var/www/public:ro
+      - ../backend/public:/var/www/public:ro
     depends_on:
       - app
-    networks:
-      - sortie-net
-
-  # ── Filament Admin (sous-domaine admin.sortie-ecole.ma) ────
-  filament:
-    build:
-      context: ../backend
-      dockerfile: docker/Dockerfile
-    container_name: sortie-filament
-    restart: unless-stopped
-    working_dir: /var/www
-    volumes:
-      - C:/prog/Sortie-ecole/backend:/var/www
-      - vendor_app:/var/www/vendor
-    environment:
-      APP_ENV: local
-      APP_DEBUG: "true"
-      APP_URL: http://admin.sortie-ecole.ma
-      DB_CONNECTION: pgsql
-      DB_HOST: postgresql
-      DB_PORT: 5432
-      DB_DATABASE: sortie_ecole
-      DB_USERNAME: sortie
-      DB_PASSWORD: secret
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      FILAMENT_DOMAIN: admin.sortie-ecole.ma
-    dns:
-      - 8.8.8.8
-    depends_on:
-      postgresql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     networks:
       - sortie-net
 

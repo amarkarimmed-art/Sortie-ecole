@@ -59,7 +59,7 @@ passe à on_the_way, l'agent au portail peut remettre. Le micro est supprimé.
        Idempotency-Key : une seule transition effective, les deux
        réponses sont identiques (200).
 - CA9  Un appel ou départ sur une demande handed_over, cancelled ou
-       expired renvoie 409 conflict.
+       expired renvoie 422 unprocessable.
 - CA10 Un appel sur une demande déjà class_notified renvoie 200 sans
        nouvelle transition (idempotence).
 - CA11 L'écran surveillant affiche les demandes class_notified groupées

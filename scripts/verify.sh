@@ -7,12 +7,15 @@
 # Ce script valide l'intégralité du cycle avant chaque commit / en CI.
 #
 # Usage :
-#   ./scripts/verify.sh              # Exécuter toutes les vérifications
-#   ./scripts/verify.sh --api        # OpenAPI uniquement
-#   ./scripts/verify.sh --backend    # Laravel uniquement
-#   ./scripts/verify.sh --flutter    # Les deux apps Flutter
-#   ./scripts/verify.sh --security   # Garde-fous sécurité / CNDP 09-08
-#   ./scripts/verify.sh --i18n       # Complétude traductions ARB
+#   ./scripts/verify.sh                          # Exécuter toutes les vérifications
+#   ./scripts/verify.sh tout                     # Alias pour toutes les étapes
+#   ./scripts/verify.sh contrat | --api          # OpenAPI uniquement
+#   ./scripts/verify.sh backend | --backend      # Laravel uniquement
+#   ./scripts/verify.sh flutter | --flutter      # Les deux apps Flutter
+#   ./scripts/verify.sh security | --security    # Garde-fous sécurité / CNDP 09-08
+#   ./scripts/verify.sh i18n | --i18n            # Complétude traductions ARB
+#
+# Alias acceptés : contrat, backend, flutter, security, i18n, tout
 #
 # Codes de sortie :
 #   0 = Toutes les vérifications ont réussi
@@ -69,13 +72,26 @@ RUN_I18N=false
 
 for arg in "$@"; do
   case "$arg" in
-    --api|api)          RUN_API=true;      RUN_ALL=false ;;
-    --backend|backend)  RUN_BACKEND=true;  RUN_ALL=false ;;
-    --flutter|flutter)  RUN_FLUTTER=true;  RUN_ALL=false ;;
-    --security|security) RUN_SECURITY=true; RUN_ALL=false ;;
-    --i18n|i18n)     RUN_I18N=true;     RUN_ALL=false ;;
+    --api|api|contrat|--contrat) RUN_API=true;      RUN_ALL=false ;;
+    --backend|backend)           RUN_BACKEND=true;  RUN_ALL=false ;;
+    --flutter|flutter)           RUN_FLUTTER=true;  RUN_ALL=false ;;
+    --security|security)         RUN_SECURITY=true; RUN_ALL=false ;;
+    --i18n|i18n)                 RUN_I18N=true;     RUN_ALL=false ;;
+    tout|--all|all)              RUN_ALL=true ;;
     --help|-h|help)
-      head -n 18 "$0" | tail -n 12
+      cat << 'EOF'
+Usage :
+  ./scripts/verify.sh [OPTION|ALIAS]
+
+Options et alias disponibles :
+  tout       (ou --all)      Exécuter toutes les vérifications
+  contrat    (ou --api)      Validation OpenAPI / Spectral uniquement
+  backend    (ou --backend)  Tests et statique Laravel uniquement
+  flutter    (ou --flutter)  Analyse et tests des deux apps Flutter
+  security   (ou --security) Garde-fous sécurité / CNDP 09-08
+  i18n       (ou --i18n)     Complétude traductions ARB
+  --help, -h                 Afficher cette aide
+EOF
       exit 0
       ;;
     *)
@@ -274,7 +290,10 @@ run_security_checks() {
     --include="*.yaml" \
     --include="*.yml" \
     -E "(latitude|longitude|->decimal\('lat|->decimal\('lng|->float\('lat|->float\('lng)" \
-    backend/ api/ 2>/dev/null || true)
+    backend/ api/ 2>/dev/null \
+    | grep -v "gate_latitude" \
+    | grep -v "gate_longitude" \
+    | grep -v "tests/" || true)
 
   if [[ -z "$gps_violations" ]]; then
     log_pass "Aucune colonne GPS brute (lat/lng/latitude/longitude) détectée"

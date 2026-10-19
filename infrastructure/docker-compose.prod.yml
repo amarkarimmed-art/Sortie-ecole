@@ -10,6 +10,14 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
 
+  worker:
+    restart: always
+    volumes: []
+
+  scheduler:
+    restart: always
+    volumes: []
+
   postgresql:
     restart: always
     environment:
@@ -31,10 +39,3 @@ services:
 
   nginx:
     restart: always
-
-  filament:
-    restart: always
-    environment:
-      APP_ENV: production
-      APP_DEBUG: "false"
-      APP_URL: https://admin.sortie-ecole.ma
