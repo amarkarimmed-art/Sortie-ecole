@@ -1,17 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\PickupWindowResource\Pages;
-use App\Filament\Resources\PickupWindowResource\RelationManagers;
 use App\Models\PickupWindow;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class PickupWindowResource extends Resource
 {
@@ -41,12 +40,15 @@ class PickupWindowResource extends Resource
                     ])
                     ->required()
                     ->label('Jour de la semaine'),
+
                 Forms\Components\TimePicker::make('start_time')
                     ->required()
                     ->label('Heure de début'),
+
                 Forms\Components\TimePicker::make('end_time')
                     ->required()
                     ->label('Heure de fin'),
+
                 Forms\Components\Toggle::make('is_ramadan')
                     ->label('Régime horaire Ramadan'),
             ]);
@@ -69,17 +71,21 @@ class PickupWindowResource extends Resource
                     })
                     ->sortable()
                     ->label('Jour'),
+
                 Tables\Columns\TextColumn::make('start_time')
                     ->sortable()
                     ->label('Début'),
+
                 Tables\Columns\TextColumn::make('end_time')
                     ->sortable()
                     ->label('Fin'),
+
                 Tables\Columns\IconColumn::make('is_ramadan')
                     ->boolean()
                     ->label('Ramadan'),
+
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->dateTime('d/m/Y H:i')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
@@ -88,6 +94,7 @@ class PickupWindowResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -106,9 +113,9 @@ class PickupWindowResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPickupWindows::route('/'),
+            'index'  => Pages\ListPickupWindows::route('/'),
             'create' => Pages\CreatePickupWindow::route('/create'),
-            'edit' => Pages\EditPickupWindow::route('/{record}/edit'),
+            'edit'   => Pages\EditPickupWindow::route('/{record}/edit'),
         ];
     }
 }

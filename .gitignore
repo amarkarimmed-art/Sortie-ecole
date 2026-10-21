@@ -62,3 +62,7 @@ docker-compose.override.yml
 
 # Scripts de debug locaux (jamais commités)
 /backend/public/test.php
+
+backend/public/storage
+backend/storage/framework/views/*.php
+backend/storage/logs/*.log

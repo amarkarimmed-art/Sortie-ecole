@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Modèle École (School) — Clé de partitionnement multi-établissement (ADR 0005).
@@ -22,9 +23,20 @@ class School extends Model
     protected function casts(): array
     {
         return [
+            'is_suspended' => 'boolean',
             'gate_latitude' => 'float',
             'gate_longitude' => 'float',
         ];
+    }
+
+    public function director(): HasOne
+    {
+        return $this->hasOne(User::class, 'school_id')->withoutGlobalScopes()->where('role', 'director');
+    }
+
+    public function directors(): HasMany
+    {
+        return $this->hasMany(User::class)->where('role', 'director');
     }
 
     public function users(): HasMany

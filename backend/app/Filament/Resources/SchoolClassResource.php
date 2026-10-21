@@ -1,17 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\SchoolClassResource\Pages;
-use App\Filament\Resources\SchoolClassResource\RelationManagers;
 use App\Models\SchoolClass;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class SchoolClassResource extends Resource
 {
@@ -30,6 +29,7 @@ class SchoolClassResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->label('Nom de la classe')
                     ->required()
                     ->maxLength(255),
             ]);
@@ -39,25 +39,21 @@ class SchoolClassResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                    ->label('ID'),
-                Tables\Columns\TextColumn::make('school.name'),
                 Tables\Columns\TextColumn::make('name')
-                    ->searchable(),
+                    ->label('Nom de la classe')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('Date de création')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
             ])
             ->filters([
                 //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -76,9 +72,9 @@ class SchoolClassResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSchoolClasses::route('/'),
+            'index'  => Pages\ListSchoolClasses::route('/'),
             'create' => Pages\CreateSchoolClass::route('/create'),
-            'edit' => Pages\EditSchoolClass::route('/{record}/edit'),
+            'edit'   => Pages\EditSchoolClass::route('/{record}/edit'),
         ];
     }
 }

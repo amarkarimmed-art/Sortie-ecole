@@ -39,6 +39,20 @@ class UserFactory extends Factory
 
     public function director(): static
     {
-        return $this->state(['role' => 'director']);
+        return $this->state([
+            'role' => 'director',
+            'email' => fake()->unique()->safeEmail(),
+            'password' => 'password123',
+        ]);
+    }
+
+    public function superAdmin(): static
+    {
+        return $this->state([
+            'role' => 'super_admin',
+            'school_id' => null,
+            'email' => fake()->unique()->safeEmail(),
+            'password' => 'password123',
+        ]);
     }
 }

@@ -33,7 +33,7 @@ docker compose exec app php artisan key:generate
 
 # 5. Exécuter les migrations
 echo "🗄️  Exécution des migrations..."
-docker compose exec app php artisan migrate
+docker compose exec app php artisan migrate --seed
 
 # 6. Initialiser MinIO
 echo "📦 Initialisation des buckets MinIO..."

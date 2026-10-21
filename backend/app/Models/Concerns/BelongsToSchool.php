@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models\Concerns;
 
 use App\Models\School;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,19 +19,6 @@ use Illuminate\Support\Facades\Auth;
  * sur toutes les requêtes Eloquent. Toute tentative d'accès
  * à une ressource d'une autre école retourne 404 (jamais 403)
  * pour empêcher l'énumération de données.
- *
- * Usage :
- *   class PickupRequest extends BaseModel
- *   {
- *       // Le trait est déjà appliqué via BaseModel.
- *   }
- * //
- * // Note : Ne JAMAIS appeler withoutGlobalScopes() sans
- * justification explicite en commentaire d'architecture
- * (règle .agents/rules/regles_agent_style_laravel_backend.md).
- */
-/**
- * État d'anti-récursion pour le scope global multi-établissement.
  */
 class SchoolScopeState
 {
@@ -52,30 +40,39 @@ trait BelongsToSchool
                     return;
                 }
 
-                try {
-                    if (request()?->is('admin/login*', 'super-admin*')) {
-                        return;
-                    }
-                } catch (\Throwable) {
-                    // Hors contexte HTTP
-                }
-
                 SchoolScopeState::$isResolving = true;
 
                 try {
+                    // Si le modèle interrogé est User et que !Auth::hasUser(),
+                    // ne pas filtrer afin de permettre à /admin/login et /super-admin/login
+                    // de trouver le compte par email.
+                    if ($model instanceof User && ! Auth::hasUser()) {
+                        return;
+                    }
+
                     $user = Auth::user();
 
-                    if ($user && method_exists($user, 'getSchoolId')) {
+                    if (! $user) {
+                        return;
+                    }
+
+                    // Bypass strictement basé sur le rôle super_admin
+                    if ($user->role === 'super_admin') {
+                        return;
+                    }
+
+                    // Sinon (director, admin, concierge, surveillant, parent), filtre obligatoirement
+                    if (method_exists($user, 'getSchoolId')) {
                         $schoolId = $user->getSchoolId();
-                        if (!empty($schoolId)) {
+                        if (! empty($schoolId)) {
                             $builder->where(
-                                $model->getTable().'.school_id',
+                                $model->getTable() . '.school_id',
                                 $schoolId
                             );
                         }
                     }
                 } catch (\Throwable) {
-                    // Session guard non prêt ou contexte console
+                    // Gestion de session ou contexte console
                 } finally {
                     SchoolScopeState::$isResolving = false;
                 }
@@ -88,24 +85,17 @@ trait BelongsToSchool
                 return;
             }
 
-            try {
-                if (request()?->is('super-admin*')) {
-                    return;
-                }
-            } catch (\Throwable) {
-                // Hors contexte HTTP
-            }
-
             SchoolScopeState::$isResolving = true;
 
             try {
                 $user = Auth::user();
 
-                if ($user && method_exists($user, 'getSchoolId') && empty($model->school_id)) {
-                    $schoolId = $user->getSchoolId();
-                    if (!empty($schoolId)) {
-                        $model->school_id = $schoolId;
-                    }
+                if (! $user || $user->role === 'super_admin') {
+                    return;
+                }
+
+                if (empty($model->school_id) && method_exists($user, 'getSchoolId') && ! empty($user->getSchoolId())) {
+                    $model->school_id = $user->getSchoolId();
                 }
             } catch (\Throwable) {
                 // Contexte non authentifié

@@ -27,6 +27,28 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->brandName(function (): string {
+                $user = auth()->user();
+                if ($user && $user->role !== 'super_admin' && $user->school_id) {
+                    $school = \App\Models\School::withoutGlobalScopes()->find($user->school_id);
+                    if ($school) {
+                        return $school->name;
+                    }
+                }
+                return "Sortie d'école — Espace École";
+            })
+            ->brandLogo(function (): ?string {
+                $user = auth()->user();
+                if ($user && $user->role !== 'super_admin' && $user->school_id) {
+                    $school = \App\Models\School::withoutGlobalScopes()->find($user->school_id);
+                    if ($school && !empty($school->logo)) {
+                        return \Illuminate\Support\Facades\Storage::disk('public')->url($school->logo);
+                    }
+                }
+                return null;
+            })
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('favicon.png'))
             ->colors([
                 'primary' => Color::Amber,
             ])
