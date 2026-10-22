@@ -2,51 +2,34 @@ import 'package:equatable/equatable.dart';
 import 'user.dart';
 
 class LoginRequestDto extends Equatable {
-  final String phone;
+  final String login;
+  final String password;
+  final String? appType;
 
-  const LoginRequestDto({required this.phone});
+  const LoginRequestDto({
+    required this.login,
+    required this.password,
+    this.appType,
+  });
 
   factory LoginRequestDto.fromJson(Map<String, dynamic> json) {
     return LoginRequestDto(
-      phone: json['phone'] as String,
+      login: json['login'] as String,
+      password: json['password'] as String,
+      appType: json['app_type'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'phone': phone,
+      'login': login,
+      'password': password,
+      if (appType != null) 'app_type': appType,
     };
   }
 
   @override
-  List<Object?> get props => [phone];
-}
-
-class VerifyRequestDto extends Equatable {
-  final String phone;
-  final String code;
-
-  const VerifyRequestDto({
-    required this.phone,
-    required this.code,
-  });
-
-  factory VerifyRequestDto.fromJson(Map<String, dynamic> json) {
-    return VerifyRequestDto(
-      phone: json['phone'] as String,
-      code: json['code'] as String,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'phone': phone,
-      'code': code,
-    };
-  }
-
-  @override
-  List<Object?> get props => [phone, code];
+  List<Object?> get props => [login, password, appType];
 }
 
 class AuthResponseDto extends Equatable {

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/reverb_service.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/surveillance_repository.dart';
 import '../domain/pickup_request_called_event.dart';
 import '../domain/pickup_request_departed_event.dart';
@@ -22,6 +24,8 @@ class SurveillanceScreen extends StatefulWidget {
   final ReverbService? reverbService;
   final String? token;
   final String? schoolId;
+  final String? schoolName;
+  final String? schoolLogo;
 
   const SurveillanceScreen({
     super.key = const Key('ecran_surveillance'),
@@ -29,6 +33,8 @@ class SurveillanceScreen extends StatefulWidget {
     this.reverbService,
     this.token,
     this.schoolId,
+    this.schoolName,
+    this.schoolLogo,
   });
 
   @override
@@ -40,9 +46,17 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   bool _ownsRepository = false;
   StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
 
+  String? _effectiveToken;
+  String? _schoolName;
+  String? _schoolLogo;
+
   @override
   void initState() {
     super.initState();
+    _effectiveToken = widget.token;
+    _schoolName = widget.schoolName;
+    _schoolLogo = widget.schoolLogo;
+
     final effectiveSchoolId =
         widget.schoolId ?? 'a3000c08-8f84-4bff-8c3f-81ebf2b014dd';
     if (widget.repository != null) {
@@ -61,6 +75,8 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
       _ownsRepository = true;
     }
 
+    _loadStorageInfo();
+
     _repository.init();
     _repository.loadInitialQueue(token: widget.token);
     _repository.reverbService.connect(authToken: widget.token);
@@ -74,6 +90,45 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
         });
       }
     });
+  }
+
+  Future<void> _loadStorageInfo() async {
+    try {
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+      final name = await storage.read(key: 'auth_school_name');
+      final logo = await storage.read(key: 'auth_school_logo');
+
+      if (mounted) {
+        setState(() {
+          if (_effectiveToken == null || _effectiveToken!.isEmpty) {
+            _effectiveToken = token;
+          }
+          if (_schoolName == null || _schoolName!.isEmpty) {
+            _schoolName = name;
+          }
+          if (_schoolLogo == null || _schoolLogo!.isEmpty) {
+            _schoolLogo = logo;
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _handleLogout() async {
+    final token = _effectiveToken ?? widget.token;
+    try {
+      const storage = FlutterSecureStorage();
+      await storage.deleteAll();
+      if (token != null && token.isNotEmpty) {
+        final authRepo = AuthRepositoryImpl(baseUrl: _repository.baseUrl);
+        await authRepo.logout(token);
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+    }
   }
 
   @override
@@ -92,9 +147,46 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
+    // Récupérer arguments de route si passés
+    final routeArgs = ModalRoute.of(context)?.settings.arguments;
+    if (routeArgs is Map<String, dynamic>) {
+      _schoolName ??= routeArgs['schoolName'] as String?;
+      _schoolLogo ??= routeArgs['schoolLogo'] as String?;
+      _effectiveToken ??= routeArgs['token'] as String?;
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.ecranSurveillanceTitre),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_schoolLogo != null && _schoolLogo!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    _schoolLogo!,
+                    width: 28,
+                    height: 28,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 24),
+                  ),
+                ),
+              )
+            else
+              const Padding(
+                padding: EdgeInsetsDirectional.only(end: 8.0),
+                child: Icon(Icons.school, size: 24),
+              ),
+            Flexible(
+              child: Text(
+                _schoolName ?? l10n.ecranSurveillanceTitre,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
         actions: [
           // Indicateur de resynchronisation / état WS (CA15)
           StreamBuilder<bool>(
@@ -105,7 +197,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
               final isConnected =
                   snapshot.data ?? _repository.reverbService.isConnected;
               return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 16.0),
+                padding: const EdgeInsetsDirectional.only(end: 8.0),
                 child: Row(
                   children: [
                     Icon(
@@ -124,6 +216,12 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                 ),
               );
             },
+          ),
+          IconButton(
+            key: const Key('surveillance_btn_logout'),
+            tooltip: l10n.deconnexion,
+            icon: const Icon(Icons.logout_rounded),
+            onPressed: _handleLogout,
           ),
         ],
       ),
@@ -145,6 +243,10 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
               }
 
               if (state is SurveillanceError) {
+                if (state.message.contains('401') || state.message.toLowerCase().contains('unauthenticated')) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _handleLogout());
+                }
+
                 return Center(
                   child: Padding(
                     padding: const EdgeInsetsDirectional.all(24.0),
@@ -166,7 +268,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                         ),
                         const SizedBox(height: 16.0),
                         ElevatedButton.icon(
-                          onPressed: () => _repository.loadInitialQueue(token: widget.token),
+                          onPressed: () => _repository.loadInitialQueue(token: _effectiveToken ?? widget.token),
                           icon: const Icon(Icons.refresh),
                           label: Text(l10n.reessayer),
                           style: ElevatedButton.styleFrom(
@@ -224,7 +326,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                           className: entry.key,
                           items: entry.value,
                           repository: _repository,
-                          token: widget.token,
+                          token: _effectiveToken ?? widget.token,
                         )),
                   ],
                 );

@@ -132,6 +132,23 @@ class MarkDepartAction
             $locked->load('child');
             PickupRequestDeparted::dispatch($locked);
 
+            if ($locked->requested_by) {
+                try {
+                    $child = $locked->child;
+                    $childName = trim("{$child?->first_name} {$child?->last_name}");
+                    event(new \App\Events\ParentPickupStatusUpdated(
+                        requestId: (string) $locked->id,
+                        schoolId: (string) $locked->school_id,
+                        parentUserId: (string) $locked->requested_by,
+                        childId: (string) $locked->child_id,
+                        childName: $childName,
+                        status: PickupRequest::STATUS_ON_THE_WAY,
+                        updatedAt: $locked->updated_at?->toISOString() ?? $now->toISOString(),
+                    ));
+                } catch (\Throwable) {
+                }
+            }
+
             $responseBody = [
                 'id' => (string) $locked->id,
                 'status' => $locked->status,

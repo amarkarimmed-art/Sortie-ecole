@@ -5,4 +5,7 @@ abstract class ArrivalRepository {
   ///
   /// Lève une [ArrivalException] (ex: [OutOfRadiusException], [RateLimitException]) en cas d'échec.
   Future<ArrivalResponse> signalArrival(ArrivalSignalRequest request);
+
+  /// Récupère le statut de la dernière arrivée enregistrée.
+  Future<Map<String, dynamic>> getArrivalStatus();
 }

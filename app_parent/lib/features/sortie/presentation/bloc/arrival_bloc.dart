@@ -30,6 +30,7 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
         super(const ArrivalInitial()) {
     on<SignalArrivalRequested>(_onSignalArrivalRequested);
     on<RefreshArrivalStatusRequested>(_onRefreshArrivalStatusRequested);
+    on<ArrivalRealtimeStatusUpdated>(_onArrivalRealtimeStatusUpdated);
   }
 
   Future<void> _onSignalArrivalRequested(
@@ -99,7 +100,58 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
     RefreshArrivalStatusRequested event,
     Emitter<ArrivalState> emit,
   ) async {
-    // Si déjà dans un état d'arrivée, relance la mise à jour
-    add(const SignalArrivalRequested());
+    try {
+      final data = await arrivalRepository.getArrivalStatus();
+      final arrivalData = data['arrival'];
+      final pickupRequests = (data['pickup_requests'] as List?) ?? [];
+
+      String? effectiveStatus;
+      String? childName;
+
+      if (pickupRequests.isNotEmpty) {
+        final firstReq = Map<String, dynamic>.from(pickupRequests.first as Map);
+        effectiveStatus = firstReq['status'] as String?;
+        final child = firstReq['child'] as Map<String, dynamic>?;
+        if (child != null) {
+          childName = '${child['first_name'] ?? ''} ${child['last_name'] ?? ''}'.trim();
+        }
+      }
+
+      final arrivalResponse = arrivalData != null
+          ? ArrivalResponse.fromJson(Map<String, dynamic>.from(arrivalData as Map))
+          : (state is ArrivalSuccess
+              ? (state as ArrivalSuccess).response
+              : const ArrivalResponse(id: '', status: 'requested'));
+
+      emit(ArrivalSuccess(
+        arrivalResponse,
+        realtimeStatus: effectiveStatus ?? arrivalResponse.status,
+        childName: childName,
+      ));
+    } on ArrivalException catch (e) {
+      emit(ArrivalFailure(e));
+    } catch (e) {
+      emit(ArrivalFailure(ServerArrivalException(e.toString())));
+    }
+  }
+
+  void _onArrivalRealtimeStatusUpdated(
+    ArrivalRealtimeStatusUpdated event,
+    Emitter<ArrivalState> emit,
+  ) {
+    if (state is ArrivalSuccess) {
+      final current = state as ArrivalSuccess;
+      emit(ArrivalSuccess(
+        current.response,
+        realtimeStatus: event.status,
+        childName: event.childName ?? current.childName,
+      ));
+    } else {
+      emit(ArrivalSuccess(
+        ArrivalResponse(id: '', status: event.status),
+        realtimeStatus: event.status,
+        childName: event.childName,
+      ));
+    }
   }
 }

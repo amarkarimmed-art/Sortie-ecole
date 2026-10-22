@@ -4,42 +4,83 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
-use App\Actions\Auth\SendOtpAction;
-use App\Actions\Auth\VerifyOtpAction;
+use App\Actions\Auth\LoginWithPasswordAction;
 use App\Http\Controllers\BaseController;
-use App\Http\Requests\Auth\LoginRequest;
-use App\Http\Requests\Auth\VerifyOtpRequest;
+use App\Models\School;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 /**
- * Contrôleur d'authentification SMS (F01).
+ * Contrôleur d'authentification par Login + Mot de passe.
  *
  * Mince et sans logique métier (ADR 0002).
- * Délègue à SendOtpAction et VerifyOtpAction.
+ * Délègue à LoginWithPasswordAction.
  *
  * Routes :
- *   POST /api/v1/auth/login   → demander un code OTP
- *   POST /api/v1/auth/verify  → vérifier le code et obtenir un token Sanctum
+ *   POST /api/login  → Connexion avec login + mot de passe
+ *   POST /api/logout → Révocation du token Sanctum
+ *   GET  /api/me     → Profil de l'utilisateur connecté
  */
 class AuthController extends BaseController
 {
     /**
-     * Demander un code OTP par SMS (CA1, CA2).
+     * Connexion par login + mot de passe.
      */
-    public function login(LoginRequest $request, SendOtpAction $action): JsonResponse
+    public function login(Request $request, LoginWithPasswordAction $action): JsonResponse
     {
-        $result = $action->handle($request->validated());
+        $validated = $request->validate([
+            'login'    => ['required', 'string'],
+            'password' => ['required', 'string'],
+            'app_type' => ['nullable', 'string', 'in:parent,ecole,app_parent,app_ecole'],
+        ]);
 
-        return response()->json($result, 200);
+        $appType = $validated['app_type'] ?? $request->header('X-App-Type');
+
+        $result = $action->handle([
+            'login'    => $validated['login'],
+            'password' => $validated['password'],
+            'app_type' => $appType,
+            'ip'       => $request->ip(),
+        ]);
+
+        return response()->json($result['response'], $result['status']);
     }
 
     /**
-     * Vérifier le code OTP et émettre un token Sanctum (CA3, CA4).
+     * Révocation du token Sanctum courant.
      */
-    public function verify(VerifyOtpRequest $request, VerifyOtpAction $action): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
-        $result = $action->handle($request->validated());
+        $request->user()?->currentAccessToken()?->delete();
 
-        return response()->json($result, 200);
+        return response()->json([
+            'message' => 'Déconnexion réussie.',
+        ], 200);
+    }
+
+    /**
+     * Profil de l'utilisateur connecté pour reconnexion automatique.
+     */
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        $school = School::withoutGlobalScopes()->find($user->school_id);
+
+        if (! $school || $school->is_suspended) {
+            return response()->json([
+                'message' => "École suspendue, contactez l'administration.",
+            ], 403);
+        }
+
+        return response()->json([
+            'user' => LoginWithPasswordAction::formatUserPayload($user, $school),
+        ], 200);
     }
 }

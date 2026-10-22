@@ -16,3 +16,14 @@ class SignalArrivalRequested extends ArrivalEvent {
 class RefreshArrivalStatusRequested extends ArrivalEvent {
   const RefreshArrivalStatusRequested();
 }
+
+/// Événement temps réel émis lors de la réception d'une mise à jour de statut (WebSocket ou polling).
+class ArrivalRealtimeStatusUpdated extends ArrivalEvent {
+  final String status;
+  final String? childName;
+
+  const ArrivalRealtimeStatusUpdated(this.status, {this.childName});
+
+  @override
+  List<Object?> get props => [status, childName];
+}

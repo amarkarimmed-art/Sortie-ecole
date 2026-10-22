@@ -71,6 +71,48 @@ class AppLocalizationsFr extends AppLocalizations {
   String get loginBadgePersonnel => 'Personnel scolaire';
 
   @override
+  String get loginIdentifiantLabel => 'Identifiant / Login';
+
+  @override
+  String get loginIdentifiantHint => 'ex. surveillant@alamal';
+
+  @override
+  String get loginMotDePasseLabel => 'Mot de passe';
+
+  @override
+  String get loginMotDePasseHint => 'Votre mot de passe';
+
+  @override
+  String get loginBoutonSeConnecter => 'Se connecter';
+
+  @override
+  String get loginErreurIdentifiantRequis =>
+      'Veuillez saisir votre identifiant';
+
+  @override
+  String get loginErreurMotDePasseRequis =>
+      'Veuillez saisir votre mot de passe';
+
+  @override
+  String get loginErreurIdentifiantsIncorrects =>
+      'Login ou mot de passe incorrect';
+
+  @override
+  String get loginErreurEcoleSuspendue =>
+      'École suspendue, contactez l\'administration';
+
+  @override
+  String get loginErreurRoleNonAutorise =>
+      'Accès réservé aux surveillants et agents d\'accueil';
+
+  @override
+  String get loginErreurTropDeTentatives =>
+      'Trop de tentatives, réessayez dans une minute';
+
+  @override
+  String get deconnexion => 'Déconnexion';
+
+  @override
   String get loginNumeroLabel => 'Numéro de téléphone';
 
   @override
@@ -136,14 +178,6 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get loginErreurUtilisateurIntrouvable =>
       'Utilisateur introuvable. Veuillez contacter l\'administration de l\'établissement.';
-
-  @override
-  String get loginErreurTropDeTentatives =>
-      'Trop de tentatives. Veuillez patienter avant de réessayer.';
-
-  @override
-  String get loginErreurRoleNonAutorise =>
-      'Accès réservé au personnel de l\'école (surveillants, accueil, direction).';
 
   @override
   String get loginErreurReseau =>

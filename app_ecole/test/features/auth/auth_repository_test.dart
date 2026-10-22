@@ -19,27 +19,7 @@ class FakeDioAdapter implements HttpClientAdapter {
 }
 
 void main() {
-  group('AuthRepository - Helpers marocains & Loi 09-08', () {
-    test('normalizeMoroccanPhone normalise les différents formats au format E.164 (+212)', () {
-      expect(normalizeMoroccanPhone('+212612345678'), '+212612345678');
-      expect(normalizeMoroccanPhone('0612345678'), '+212612345678');
-      expect(normalizeMoroccanPhone('0712345678'), '+212712345678');
-      expect(normalizeMoroccanPhone('0522123456'), '+212522123456');
-      expect(normalizeMoroccanPhone('612345678'), '+212612345678');
-      expect(normalizeMoroccanPhone('00212612345678'), '+212612345678');
-      expect(normalizeMoroccanPhone('06 12 34 56 78'), '+212612345678');
-    });
-
-    test('maskMoroccanPhone masque les chiffres intermédiaires conformément à la Loi 09-08', () {
-      final masked = maskMoroccanPhone('0612345678');
-      expect(masked, contains('+2126'));
-      expect(masked, contains('•• •• ••'));
-      expect(masked, contains('78'));
-      expect(masked, isNot(contains('123456')));
-    });
-  });
-
-  group('AuthRepository - Appels HTTP Dio', () {
+  group('AuthRepository - Login avec mot de passe & Sessions', () {
     late Dio dio;
     late FakeDioAdapter fakeAdapter;
     late AuthRepositoryImpl repository;
@@ -51,63 +31,13 @@ void main() {
       repository = AuthRepositoryImpl(dio: dio, baseUrl: 'http://127.0.0.1:8000');
     });
 
-    test('requestOtp réussit avec un code 200', () async {
+    test('login réussit avec code 200 pour un surveillant', () async {
       fakeAdapter.handler = (options) {
-        expect(options.path, endsWith('/api/v1/auth/login'));
-        expect(options.data['phone'], '+212612345678');
-        return ResponseBody.fromString(
-          '{"message": "Code envoyé par SMS."}',
-          200,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      };
+        expect(options.path, endsWith('/api/login'));
+        expect(options.data['login'], 'surveillant@alamal');
+        expect(options.data['password'], 'secret');
+        expect(options.data['app_type'], 'ecole');
 
-      await expectLater(
-        repository.requestOtp('0612345678'),
-        completes,
-      );
-    });
-
-    test('requestOtp lève AuthUserNotFoundException en cas de 404', () async {
-      fakeAdapter.handler = (options) {
-        return ResponseBody.fromString(
-          '{"message": "Utilisateur introuvable."}',
-          404,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      };
-
-      expect(
-        () => repository.requestOtp('0600000000'),
-        throwsA(isA<AuthUserNotFoundException>()),
-      );
-    });
-
-    test('requestOtp lève AuthRateLimitException en cas de 429', () async {
-      fakeAdapter.handler = (options) {
-        return ResponseBody.fromString(
-          '{"message": "Trop de tentatives."}',
-          429,
-          headers: {
-            Headers.contentTypeHeader: [Headers.jsonContentType],
-          },
-        );
-      };
-
-      expect(
-        () => repository.requestOtp('0612345678'),
-        throwsA(isA<AuthRateLimitException>()),
-      );
-    });
-
-    test('verifyOtp retourne AuthResponseDto pour un surveillant', () async {
-      fakeAdapter.handler = (options) {
-        expect(options.path, endsWith('/api/v1/auth/verify'));
-        expect(options.data['code'], '123456');
         return ResponseBody.fromString(
           '''
           {
@@ -115,10 +45,12 @@ void main() {
             "user": {
               "id": "u-123",
               "name": "Ahmed Surveillant",
+              "login": "surveillant@alamal",
               "phone": "+212612345678",
               "role": "surveillant",
               "locale": "fr",
               "school_id": "school-abc-123",
+              "school_name": "École Al Amal",
               "children": []
             }
           }
@@ -130,14 +62,15 @@ void main() {
         );
       };
 
-      final response = await repository.verifyOtp('0612345678', '123456');
+      final response = await repository.login('surveillant@alamal', 'secret');
       expect(response.token, 'sanctum_token_test_123');
       expect(response.user.name, 'Ahmed Surveillant');
       expect(response.user.role, 'surveillant');
       expect(response.user.schoolId, 'school-abc-123');
+      expect(response.user.schoolName, 'École Al Amal');
     });
 
-    test('verifyOtp refuse la connexion si le rôle est parent', () async {
+    test('login refuse la connexion si le rôle est parent', () async {
       fakeAdapter.handler = (options) {
         return ResponseBody.fromString(
           '''
@@ -146,7 +79,7 @@ void main() {
             "user": {
               "id": "u-parent",
               "name": "Fatima Parent",
-              "phone": "+212612345678",
+              "login": "parent@alamal",
               "role": "parent",
               "locale": "fr",
               "school_id": "school-abc-123",
@@ -162,15 +95,15 @@ void main() {
       };
 
       expect(
-        () => repository.verifyOtp('0612345678', '123456'),
+        () => repository.login('parent@alamal', 'secret'),
         throwsA(isA<AuthUnauthorizedRoleException>()),
       );
     });
 
-    test('verifyOtp lève AuthInvalidOtpException en cas de 401', () async {
+    test('login lève AuthInvalidCredentialsException en cas de 401', () async {
       fakeAdapter.handler = (options) {
         return ResponseBody.fromString(
-          '{"message": "Code OTP invalide ou expiré."}',
+          '{"message": "Identifiants incorrects."}',
           401,
           headers: {
             Headers.contentTypeHeader: [Headers.jsonContentType],
@@ -179,9 +112,96 @@ void main() {
       };
 
       expect(
-        () => repository.verifyOtp('0612345678', '000000'),
-        throwsA(isA<AuthInvalidOtpException>()),
+        () => repository.login('wrong@alamal', 'badpass'),
+        throwsA(isA<AuthInvalidCredentialsException>()),
       );
+    });
+
+    test('login lève AuthRateLimitException en cas de 429', () async {
+      fakeAdapter.handler = (options) {
+        return ResponseBody.fromString(
+          '{"message": "Trop de tentatives, réessayez dans une minute."}',
+          429,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      };
+
+      expect(
+        () => repository.login('surveillant@alamal', 'badpass'),
+        throwsA(isA<AuthRateLimitException>()),
+      );
+    });
+
+    test('login lève AuthSchoolSuspendedException en cas de 403 école suspendue', () async {
+      fakeAdapter.handler = (options) {
+        return ResponseBody.fromString(
+          '{"message": "École suspendue, contactez l\'administration."}',
+          403,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      };
+
+      expect(
+        () => repository.login('surveillant@alamal', 'secret'),
+        throwsA(isA<AuthSchoolSuspendedException>()),
+      );
+    });
+
+    test('checkSession retourne UserDto en cas de session valide', () async {
+      fakeAdapter.handler = (options) {
+        expect(options.path, endsWith('/api/me'));
+        expect(options.headers['Authorization'], 'Bearer valid_token');
+
+        return ResponseBody.fromString(
+          '''
+          {
+            "user": {
+              "id": "u-123",
+              "name": "Ahmed Surveillant",
+              "login": "surveillant@alamal",
+              "role": "surveillant",
+              "locale": "fr",
+              "school_id": "school-abc-123",
+              "school_name": "École Al Amal",
+              "children": []
+            }
+          }
+          ''',
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      };
+
+      final user = await repository.checkSession('valid_token');
+      expect(user.id, 'u-123');
+      expect(user.name, 'Ahmed Surveillant');
+      expect(user.role, 'surveillant');
+    });
+
+    test('logout appelle POST /api/logout', () async {
+      bool called = false;
+      fakeAdapter.handler = (options) {
+        expect(options.path, endsWith('/api/logout'));
+        expect(options.headers['Authorization'], 'Bearer valid_token');
+        called = true;
+
+        return ResponseBody.fromString(
+          '{"message": "Déconnexion réussie."}',
+          200,
+          headers: {
+            Headers.contentTypeHeader: [Headers.jsonContentType],
+          },
+        );
+      };
+
+      await repository.logout('valid_token');
+      expect(called, isTrue);
     });
   });
 }

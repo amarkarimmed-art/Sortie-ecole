@@ -7,6 +7,7 @@ import 'package:sortie_models/sortie_models.dart';
 
 class MockArrivalRemoteDataSource implements ArrivalRemoteDataSource {
   ArrivalResponse? responseToReturn;
+  Map<String, dynamic>? statusToReturn;
   DioException? errorToThrow;
 
   @override
@@ -15,6 +16,14 @@ class MockArrivalRemoteDataSource implements ArrivalRemoteDataSource {
       throw errorToThrow!;
     }
     return responseToReturn!;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getArrivalStatus() async {
+    if (errorToThrow != null) {
+      throw errorToThrow!;
+    }
+    return statusToReturn ?? {'arrival': null, 'pickup_requests': []};
   }
 }
 

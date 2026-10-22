@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:sortie_models/sortie_models.dart';
 
-/// Exceptions métier pour l'authentification app_ecole (F01).
+/// Exceptions métier pour l'authentification app_ecole.
 abstract class AuthException implements Exception {
   final String message;
   const AuthException(this.message);
@@ -12,68 +12,47 @@ abstract class AuthException implements Exception {
   String toString() => message;
 }
 
-class AuthUserNotFoundException extends AuthException {
-  const AuthUserNotFoundException([super.message = 'Utilisateur introuvable.']);
+class AuthInvalidCredentialsException extends AuthException {
+  const AuthInvalidCredentialsException([
+    super.message = 'Login ou mot de passe incorrect.',
+  ]);
 }
 
 class AuthRateLimitException extends AuthException {
-  const AuthRateLimitException([super.message = 'Trop de tentatives.']);
+  const AuthRateLimitException([
+    super.message = 'Trop de tentatives, réessayez dans une minute.',
+  ]);
 }
 
-class AuthInvalidOtpException extends AuthException {
-  const AuthInvalidOtpException([super.message = 'Code OTP invalide ou expiré.']);
-}
-
-class AuthValidationException extends AuthException {
-  const AuthValidationException([super.message = 'Erreur de validation.']);
+class AuthSchoolSuspendedException extends AuthException {
+  const AuthSchoolSuspendedException([
+    super.message = "École suspendue, contactez l'administration.",
+  ]);
 }
 
 class AuthUnauthorizedRoleException extends AuthException {
   const AuthUnauthorizedRoleException([
-    super.message = 'Accès réservé au personnel scolaire (surveillant, accueil, direction).',
+    super.message = "Accès réservé aux surveillants et agents d'accueil.",
+  ]);
+}
+
+class AuthValidationException extends AuthException {
+  const AuthValidationException([
+    super.message = 'Erreur de validation.',
   ]);
 }
 
 class AuthNetworkException extends AuthException {
-  const AuthNetworkException([super.message = 'Erreur réseau.']);
-}
-
-/// Helper pour normaliser les numéros de téléphone marocains au format E.164.
-String normalizeMoroccanPhone(String input) {
-  final clean = input.replaceAll(RegExp(r'[\s\-\.\(\)]'), '');
-  if (clean.startsWith('+212')) {
-    return clean;
-  }
-  if (clean.startsWith('00212')) {
-    return '+212${clean.substring(5)}';
-  }
-  if (clean.startsWith('0') && clean.length == 10) {
-    return '+212${clean.substring(1)}';
-  }
-  if (clean.length == 9 && (clean.startsWith('5') || clean.startsWith('6') || clean.startsWith('7') || clean.startsWith('8'))) {
-    return '+212$clean';
-  }
-  if (!clean.startsWith('+')) {
-    return '+$clean';
-  }
-  return clean;
-}
-
-/// Helper de masquage de numéro conforme Loi 09-08 (Minimisation et confidentialité).
-String maskMoroccanPhone(String phone) {
-  final normalized = normalizeMoroccanPhone(phone);
-  if (normalized.length >= 9) {
-    final start = normalized.substring(0, normalized.length - 6);
-    final end = normalized.substring(normalized.length - 2);
-    return '$start •• •• •• $end';
-  }
-  return phone;
+  const AuthNetworkException([
+    super.message = 'Erreur réseau.',
+  ]);
 }
 
 /// Contrat du repository d'authentification.
 abstract class AuthRepository {
-  Future<void> requestOtp(String phone);
-  Future<AuthResponseDto> verifyOtp(String phone, String code);
+  Future<AuthResponseDto> login(String login, String password);
+  Future<UserDto> checkSession(String token);
+  Future<void> logout(String token);
 }
 
 /// Implémentation Dio du repository d'authentification.
@@ -81,15 +60,10 @@ class AuthRepositoryImpl implements AuthRepository {
   final Dio _dio;
   final String _baseUrl;
 
-  /// Rôles autorisés sur l'application école (tablette d'accueil et surveillance).
+  /// Rôles autorisés sur l'application école.
   static const Set<String> allowedStaffRoles = {
     'surveillant',
-    'supervisor',
-    'agent',
     'concierge',
-    'direction',
-    'director',
-    'admin',
   };
 
   AuthRepositoryImpl({
@@ -112,39 +86,14 @@ class AuthRepositoryImpl implements AuthRepository {
   String get baseUrl => _baseUrl;
 
   @override
-  Future<void> requestOtp(String rawPhone) async {
-    final phone = normalizeMoroccanPhone(rawPhone);
+  Future<AuthResponseDto> login(String login, String password) async {
     try {
       final response = await _dio.post(
-        '$_baseUrl/api/v1/auth/login',
-        data: {'phone': phone},
-      );
-
-      if (response.statusCode != 200) {
-        throw const AuthNetworkException();
-      }
-    } on DioException catch (e) {
-      final statusCode = e.response?.statusCode;
-      if (statusCode == 404) {
-        throw const AuthUserNotFoundException();
-      } else if (statusCode == 429) {
-        throw const AuthRateLimitException();
-      } else if (statusCode == 422) {
-        throw const AuthValidationException();
-      }
-      throw AuthNetworkException(e.message ?? 'Erreur réseau');
-    }
-  }
-
-  @override
-  Future<AuthResponseDto> verifyOtp(String rawPhone, String code) async {
-    final phone = normalizeMoroccanPhone(rawPhone);
-    try {
-      final response = await _dio.post(
-        '$_baseUrl/api/v1/auth/verify',
+        '$_baseUrl/api/login',
         data: {
-          'phone': phone,
-          'code': code.trim(),
+          'login': login.trim(),
+          'password': password,
+          'app_type': 'ecole',
         },
       );
 
@@ -154,28 +103,94 @@ class AuthRepositoryImpl implements AuthRepository {
       }
 
       if (response.statusCode == 200 && responseData is Map<String, dynamic>) {
-        final authResponse =
-            AuthResponseDto.fromJson(responseData);
+        final authResponse = AuthResponseDto.fromJson(responseData);
 
-        // Vérification de sécurité métier : l'application école est réservée au personnel
+        // Vérification de sécurité métier : réservé à surveillant ou concierge
         final role = authResponse.user.role.toLowerCase();
-        if (role == 'parent') {
+        if (!allowedStaffRoles.contains(role)) {
           throw const AuthUnauthorizedRoleException();
         }
 
         return authResponse;
       }
+
       throw const AuthNetworkException();
     } on DioException catch (e) {
       final statusCode = e.response?.statusCode;
+      final data = e.response?.data;
+      final msg = data is Map ? data['message']?.toString() : null;
+
       if (statusCode == 401) {
-        throw const AuthInvalidOtpException();
+        throw const AuthInvalidCredentialsException();
+      } else if (statusCode == 429) {
+        throw const AuthRateLimitException();
+      } else if (statusCode == 403) {
+        if (msg != null && msg.contains('suspendue')) {
+          throw const AuthSchoolSuspendedException();
+        }
+        throw const AuthUnauthorizedRoleException();
       } else if (statusCode == 422) {
-        throw const AuthValidationException();
-      } else if (statusCode == 404) {
-        throw const AuthUserNotFoundException();
+        throw const AuthInvalidCredentialsException();
       }
-      throw AuthNetworkException(e.message ?? 'Erreur réseau');
+      throw AuthNetworkException(msg ?? e.message ?? 'Erreur réseau');
     }
+  }
+
+  @override
+  Future<UserDto> checkSession(String token) async {
+    try {
+      final response = await _dio.get(
+        '$_baseUrl/api/me',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+
+      dynamic responseData = response.data;
+      if (responseData is String) {
+        responseData = jsonDecode(responseData);
+      }
+
+      if (response.statusCode == 200 && responseData is Map<String, dynamic>) {
+        final user = UserDto.fromJson(responseData['user'] as Map<String, dynamic>);
+        final role = user.role.toLowerCase();
+        if (!allowedStaffRoles.contains(role)) {
+          throw const AuthUnauthorizedRoleException();
+        }
+        return user;
+      }
+
+      throw const AuthNetworkException();
+    } on DioException catch (e) {
+      final statusCode = e.response?.statusCode;
+      final data = e.response?.data;
+      final msg = data is Map ? data['message']?.toString() : null;
+
+      if (statusCode == 401) {
+        throw const AuthInvalidCredentialsException();
+      } else if (statusCode == 403) {
+        if (msg != null && msg.contains('suspendue')) {
+          throw const AuthSchoolSuspendedException();
+        }
+        throw const AuthUnauthorizedRoleException();
+      }
+      throw AuthNetworkException(msg ?? e.message ?? 'Erreur réseau');
+    }
+  }
+
+  @override
+  Future<void> logout(String token) async {
+    try {
+      await _dio.post(
+        '$_baseUrl/api/logout',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
+      );
+    } catch (_) {}
   }
 }

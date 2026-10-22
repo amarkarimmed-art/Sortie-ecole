@@ -212,6 +212,78 @@ abstract class AppLocalizations {
   /// **'Personnel scolaire'**
   String get loginBadgePersonnel;
 
+  /// No description provided for @loginIdentifiantLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Identifiant / Login'**
+  String get loginIdentifiantLabel;
+
+  /// No description provided for @loginIdentifiantHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'ex. surveillant@alamal'**
+  String get loginIdentifiantHint;
+
+  /// No description provided for @loginMotDePasseLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Mot de passe'**
+  String get loginMotDePasseLabel;
+
+  /// No description provided for @loginMotDePasseHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre mot de passe'**
+  String get loginMotDePasseHint;
+
+  /// No description provided for @loginBoutonSeConnecter.
+  ///
+  /// In fr, this message translates to:
+  /// **'Se connecter'**
+  String get loginBoutonSeConnecter;
+
+  /// No description provided for @loginErreurIdentifiantRequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez saisir votre identifiant'**
+  String get loginErreurIdentifiantRequis;
+
+  /// No description provided for @loginErreurMotDePasseRequis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Veuillez saisir votre mot de passe'**
+  String get loginErreurMotDePasseRequis;
+
+  /// No description provided for @loginErreurIdentifiantsIncorrects.
+  ///
+  /// In fr, this message translates to:
+  /// **'Login ou mot de passe incorrect'**
+  String get loginErreurIdentifiantsIncorrects;
+
+  /// No description provided for @loginErreurEcoleSuspendue.
+  ///
+  /// In fr, this message translates to:
+  /// **'École suspendue, contactez l\'administration'**
+  String get loginErreurEcoleSuspendue;
+
+  /// No description provided for @loginErreurRoleNonAutorise.
+  ///
+  /// In fr, this message translates to:
+  /// **'Accès réservé aux surveillants et agents d\'accueil'**
+  String get loginErreurRoleNonAutorise;
+
+  /// No description provided for @loginErreurTropDeTentatives.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de tentatives, réessayez dans une minute'**
+  String get loginErreurTropDeTentatives;
+
+  /// No description provided for @deconnexion.
+  ///
+  /// In fr, this message translates to:
+  /// **'Déconnexion'**
+  String get deconnexion;
+
   /// No description provided for @loginNumeroLabel.
   ///
   /// In fr, this message translates to:
@@ -325,18 +397,6 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Utilisateur introuvable. Veuillez contacter l\'administration de l\'établissement.'**
   String get loginErreurUtilisateurIntrouvable;
-
-  /// No description provided for @loginErreurTropDeTentatives.
-  ///
-  /// In fr, this message translates to:
-  /// **'Trop de tentatives. Veuillez patienter avant de réessayer.'**
-  String get loginErreurTropDeTentatives;
-
-  /// No description provided for @loginErreurRoleNonAutorise.
-  ///
-  /// In fr, this message translates to:
-  /// **'Accès réservé au personnel de l\'école (surveillants, accueil, direction).'**
-  String get loginErreurRoleNonAutorise;
 
   /// No description provided for @loginErreurReseau.
   ///

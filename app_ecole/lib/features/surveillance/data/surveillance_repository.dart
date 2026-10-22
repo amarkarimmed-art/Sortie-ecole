@@ -41,6 +41,7 @@ class SurveillanceRepository {
   Stream<SurveillanceState> get state => _stateController.stream;
   List<SurveillanceItem> get currentItems => List.unmodifiable(_currentItems);
   ReverbService get reverbService => _reverbService;
+  String get baseUrl => _baseUrl;
 
   void init() {
     // Écouter les événements temps réel pickup.called sans polling (CA14)

@@ -70,6 +70,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get loginBadgePersonnel => 'أطر المدرسة';
 
   @override
+  String get loginIdentifiantLabel => 'اسم المستخدم';
+
+  @override
+  String get loginIdentifiantHint => 'مثال : surveillant@alamal';
+
+  @override
+  String get loginMotDePasseLabel => 'كلمة المرور';
+
+  @override
+  String get loginMotDePasseHint => 'كلمة المرور الخاصة بك';
+
+  @override
+  String get loginBoutonSeConnecter => 'تسجيل الدخول';
+
+  @override
+  String get loginErreurIdentifiantRequis => 'يرجى إدخال اسم المستخدم';
+
+  @override
+  String get loginErreurMotDePasseRequis => 'يرجى إدخال كلمة المرور';
+
+  @override
+  String get loginErreurIdentifiantsIncorrects =>
+      'اسم المستخدم أو كلمة المرور غير صحيحة';
+
+  @override
+  String get loginErreurEcoleSuspendue =>
+      'المدرسة معلقة، يرجى الاتصال بالإدارة';
+
+  @override
+  String get loginErreurRoleNonAutorise =>
+      'الدخول مخصص فقط لأطر المدرسة (المراقبون، أعوان الاستقبال، الإدارة).';
+
+  @override
+  String get loginErreurTropDeTentatives =>
+      'محاولات كثيرة جداً. يرجى الانتظار بضع دقائق قبل إعادة المحاولة.';
+
+  @override
+  String get deconnexion => 'تسجيل الخروج';
+
+  @override
   String get loginNumeroLabel => 'رقم الهاتف';
 
   @override
@@ -132,14 +172,6 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get loginErreurUtilisateurIntrouvable =>
       'المستخدم غير موجود. يرجى الاتصال بإدارة المؤسسة.';
-
-  @override
-  String get loginErreurTropDeTentatives =>
-      'محاولات كثيرة جداً. يرجى الانتظار بضع دقائق قبل إعادة المحاولة.';
-
-  @override
-  String get loginErreurRoleNonAutorise =>
-      'الدخول مخصص فقط لأطر المدرسة (المراقبون، أعوان الاستقبال، الإدارة).';
 
   @override
   String get loginErreurReseau =>

@@ -26,6 +26,24 @@ class ConfirmPresenceAction
             'status' => PickupRequest::STATUS_REQUESTED,
         ]);
 
+        if ($request->requested_by) {
+            try {
+                $request->loadMissing('child');
+                $child = $request->child;
+                $childName = trim("{$child?->first_name} {$child?->last_name}");
+                event(new \App\Events\ParentPickupStatusUpdated(
+                    requestId: (string) $request->id,
+                    schoolId: (string) $request->school_id,
+                    parentUserId: (string) $request->requested_by,
+                    childId: (string) $request->child_id,
+                    childName: $childName,
+                    status: PickupRequest::STATUS_REQUESTED,
+                    updatedAt: $request->updated_at?->toISOString() ?? \Carbon\Carbon::now('Africa/Casablanca')->toISOString(),
+                ));
+            } catch (\Throwable) {
+            }
+        }
+
         return $request;
     }
 }

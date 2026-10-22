@@ -5,10 +5,9 @@
 | API Routes — Sortie d'école
 |--------------------------------------------------------------------------
 |
-| API pure JSON. Toutes les routes sous /v1/.
-| Pas de routes web (pas de Blade/HTML).
-|
-| Chaîne : Request → Controller → Action → Service → Repository → Model → DB
+| API pure JSON.
+| Authentification mobile : /api/login, /api/logout, /api/me
+| Métier sous /api/v1/...
 |
 */
 
@@ -18,13 +17,16 @@ use App\Http\Controllers\Api\QueueController;
 use App\Http\Controllers\Api\StudentImportController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('v1')->group(function () {
-    // ── Routes publiques ────────────────────────────────────
-    Route::post('/auth/login', [AuthController::class, 'login'])
-        ->name('auth.login');
-    Route::post('/auth/verify', [AuthController::class, 'verify'])
-        ->name('auth.verify');
+// ── Authentification Mobile (Login + Mot de passe) ───────────
+Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
+    Route::get('/me', [AuthController::class, 'me'])->name('api.me');
+});
+
+// ── Métier V1 ────────────────────────────────────────────────
+Route::prefix('v1')->group(function () {
     // ── Routes protégées (Sanctum) ──────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
         // ── F01 : Import CSV élèves ─────────────────────────────

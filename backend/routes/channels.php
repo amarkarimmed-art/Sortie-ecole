@@ -25,3 +25,10 @@ Broadcast::channel('school.{schoolId}.queue', function (User $user, string $scho
         && method_exists($user, 'getSchoolId')
         && $user->getSchoolId() === $schoolId;
 });
+
+Broadcast::channel('school.{schoolId}.parent.{userId}', function (User $user, string $schoolId, string $userId) {
+    return $user->role === 'parent'
+        && method_exists($user, 'getSchoolId')
+        && $user->getSchoolId() === $schoolId
+        && (string) $user->id === $userId;
+});

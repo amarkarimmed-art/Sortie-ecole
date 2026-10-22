@@ -16,15 +16,6 @@ class AuthLoading extends AuthState {
   const AuthLoading();
 }
 
-class OtpSentSuccess extends AuthState {
-  final String phone;
-
-  const OtpSentSuccess(this.phone);
-
-  @override
-  List<Object?> get props => [phone];
-}
-
 class AuthAuthenticated extends AuthState {
   final UserDto user;
   final String token;
@@ -33,6 +24,10 @@ class AuthAuthenticated extends AuthState {
 
   @override
   List<Object?> get props => [user, token];
+}
+
+class AuthUnauthenticated extends AuthState {
+  const AuthUnauthenticated();
 }
 
 class AuthFailure extends AuthState {

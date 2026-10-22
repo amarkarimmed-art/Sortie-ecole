@@ -81,6 +81,21 @@ class SignalArrivalAction extends BaseAction
 
         $windows = $this->pickupWindowRepository->getWindowsForSchoolAndDay($schoolId, $dayOfWeek);
 
+        // Si l'école n'a encore aucune PickupWindow configurée (nouvelle école)
+        if ($windows->isEmpty() && PickupWindow::withoutGlobalScopes()->where('school_id', $schoolId)->doesntExist()) {
+            $this->pickupWindowRepository->create([
+                'school_id' => $schoolId,
+                'day_of_week' => $dayOfWeek,
+                'start_time' => '07:00:00',
+                'end_time' => '20:00:00',
+            ]);
+            $windows = $this->pickupWindowRepository->getWindowsForSchoolAndDay($schoolId, $dayOfWeek);
+        }
+
+        if ($windows->isEmpty()) {
+            abort(422, "Aucun créneau de sortie n'est ouvert à cette heure pour votre école.");
+        }
+
         $isInWindow = $windows->contains(function (PickupWindow $window) use ($currentTime) {
             return $currentTime >= $window->start_time && $currentTime <= $window->end_time;
         });

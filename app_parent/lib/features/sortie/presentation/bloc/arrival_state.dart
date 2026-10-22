@@ -34,14 +34,22 @@ class ArrivalSubmitting extends ArrivalState {
   List<Object?> get props => [latitude, longitude];
 }
 
-/// État de succès après confirmation de l'arrivée par l'API backend.
+/// État de succès après confirmation de l'arrivée par l'API backend ou mise à jour temps réel.
 class ArrivalSuccess extends ArrivalState {
   final ArrivalResponse response;
+  final String? realtimeStatus;
+  final String? childName;
 
-  const ArrivalSuccess(this.response);
+  const ArrivalSuccess(
+    this.response, {
+    this.realtimeStatus,
+    this.childName,
+  });
+
+  String get currentStatus => realtimeStatus ?? response.status;
 
   @override
-  List<Object?> get props => [response];
+  List<Object?> get props => [response, realtimeStatus, childName];
 }
 
 /// État de défaillance transportant l'exception exacte rencontrée.

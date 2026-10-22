@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Child;
 use App\Models\School;
 use App\Models\SchoolClass;
 use App\Models\User;
@@ -59,12 +60,64 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // 4. Classes initiales pour le back-office Filament
+        // 5. Classes initiales pour le back-office Filament
         foreach (['CP A', 'CP B', 'CE1 A', 'CE2 A'] as $className) {
             SchoolClass::withoutGlobalScopes()->firstOrCreate([
                 'school_id' => $school->id,
                 'name' => $className,
             ]);
         }
+
+        // 6. Élève de démonstration
+        $child = Child::withoutGlobalScopes()->firstOrCreate(
+            [
+                'school_id' => $school->id,
+                'first_name' => 'Sami',
+                'last_name' => 'Alami',
+                'class_name' => 'CP A',
+            ]
+        );
+
+        // 7. Compte Parent démonstration (app_parent)
+        $parent = User::withoutGlobalScopes()->updateOrCreate(
+            ['email' => 'parent.alami@alamal'],
+            [
+                'name' => 'Oussama Alami',
+                'phone' => '+212611111111',
+                'password' => 'password',
+                'role' => 'parent',
+                'school_id' => $school->id,
+                'locale' => 'fr',
+            ]
+        );
+        if (! $child->parents()->where('users.id', $parent->id)->exists()) {
+            $child->parents()->attach($parent->id, ['relationship' => 'parent']);
+        }
+
+        // 8. Compte Surveillant démonstration (app_ecole)
+        User::withoutGlobalScopes()->updateOrCreate(
+            ['email' => 'surveillant@alamal'],
+            [
+                'name' => 'Surveillant Al Amal',
+                'phone' => '+212622222222',
+                'password' => 'password',
+                'role' => 'surveillant',
+                'school_id' => $school->id,
+                'locale' => 'fr',
+            ]
+        );
+
+        // 9. Compte Concierge démonstration (app_ecole)
+        User::withoutGlobalScopes()->updateOrCreate(
+            ['email' => 'concierge@alamal'],
+            [
+                'name' => 'Concierge Al Amal',
+                'phone' => '+212633333333',
+                'password' => 'password',
+                'role' => 'concierge',
+                'school_id' => $school->id,
+                'locale' => 'fr',
+            ]
+        );
     }
 }

@@ -100,5 +100,26 @@ void main() {
       await tester.tap(find.text('Réessayer'));
       verify(() => mockArrivalBloc.add(const SignalArrivalRequested())).called(1);
     });
+
+    testWidgets('affiche les étapes de progression et l\'indicateur temps réel quand ArrivalSuccess', (tester) async {
+      const response = ArrivalResponse(
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        status: 'class_notified',
+        textFr: 'Votre enfant est appelé.',
+      );
+
+      when(() => mockArrivalBloc.state).thenReturn(
+        const ArrivalSuccess(response, realtimeStatus: 'class_notified'),
+      );
+
+      await tester.pumpWidget(createWidgetUnderTest());
+
+      expect(find.text('Progression de la sortie'), findsOneWidget);
+      expect(find.text('Arrivée signalée (en attente d\'appel)'), findsOneWidget);
+      expect(find.text('Classe prévenue — Votre enfant est appelé'), findsOneWidget);
+      expect(find.text('Enfant en chemin vers le portail'), findsOneWidget);
+      expect(find.text('Enfant remis — Bonne rentrée !'), findsOneWidget);
+      expect(find.byKey(const Key('parent_reverb_status_indicator')), findsOneWidget);
+    });
   });
 }

@@ -2,8 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:sortie_models/sortie_models.dart';
 
 abstract class AuthRemoteDataSource {
-  Future<void> requestOtp(String phone);
-  Future<AuthResponseDto> verifyOtp(String phone, String code);
+  Future<AuthResponseDto> login(String login, String password);
+  Future<UserDto> getMe(String token);
+  Future<void> logout(String token);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -12,20 +13,43 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   AuthRemoteDataSourceImpl({required this.dio});
 
   @override
-  Future<void> requestOtp(String phone) async {
-    await dio.post(
-      '/v1/auth/login',
-      data: LoginRequestDto(phone: phone).toJson(),
-    );
-  }
-
-  @override
-  Future<AuthResponseDto> verifyOtp(String phone, String code) async {
+  Future<AuthResponseDto> login(String login, String password) async {
     final response = await dio.post(
-      '/v1/auth/verify',
-      data: VerifyRequestDto(phone: phone, code: code).toJson(),
+      '/login',
+      data: LoginRequestDto(
+        login: login,
+        password: password,
+        appType: 'parent',
+      ).toJson(),
     );
 
     return AuthResponseDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<UserDto> getMe(String token) async {
+    final response = await dio.get(
+      '/me',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ),
+    );
+
+    final data = response.data as Map<String, dynamic>;
+    return UserDto.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
+  @override
+  Future<void> logout(String token) async {
+    await dio.post(
+      '/logout',
+      options: Options(
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      ),
+    );
   }
 }

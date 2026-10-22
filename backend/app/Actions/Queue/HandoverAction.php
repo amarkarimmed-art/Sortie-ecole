@@ -93,6 +93,24 @@ class HandoverAction
                     'status' => PickupRequest::STATUS_HANDED_OVER,
                 ]);
 
+                if ($locked->requested_by) {
+                    try {
+                        $locked->loadMissing('child');
+                        $child = $locked->child;
+                        $childName = trim("{$child?->first_name} {$child?->last_name}");
+                        event(new \App\Events\ParentPickupStatusUpdated(
+                            requestId: (string) $locked->id,
+                            schoolId: (string) $locked->school_id,
+                            parentUserId: (string) $locked->requested_by,
+                            childId: (string) $locked->child_id,
+                            childName: $childName,
+                            status: PickupRequest::STATUS_HANDED_OVER,
+                            updatedAt: $locked->updated_at?->toISOString() ?? \Carbon\Carbon::now('Africa/Casablanca')->toISOString(),
+                        ));
+                    } catch (\Throwable) {
+                    }
+                }
+
                 return $log;
             });
         } catch (UniqueConstraintViolationException $e) {

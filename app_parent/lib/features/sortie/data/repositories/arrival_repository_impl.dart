@@ -22,6 +22,18 @@ class ArrivalRepositoryImpl implements ArrivalRepository {
     }
   }
 
+  @override
+  Future<Map<String, dynamic>> getArrivalStatus() async {
+    try {
+      return await remoteDataSource.getArrivalStatus();
+    } on DioException catch (dioError) {
+      throw _mapDioErrorToException(dioError);
+    } catch (e) {
+      if (e is ArrivalException) rethrow;
+      throw ServerArrivalException(e.toString());
+    }
+  }
+
   ArrivalException _mapDioErrorToException(DioException error) {
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;

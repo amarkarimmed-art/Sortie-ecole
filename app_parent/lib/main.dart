@@ -5,16 +5,22 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_ui/sortie_ui.dart';
 
+import 'core/auth_session_memory.dart';
 import 'features/auth/data/datasources/auth_remote_datasource.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
-import 'features/auth/presentation/pages/phone_input_page.dart';
+import 'features/auth/presentation/bloc/auth_event.dart';
+import 'features/auth/presentation/bloc/auth_state.dart';
+import 'features/auth/presentation/pages/login_page.dart';
 import 'features/sortie/data/datasources/arrival_remote_datasource.dart';
 import 'features/sortie/data/repositories/arrival_repository_impl.dart';
 import 'features/sortie/presentation/bloc/arrival_bloc.dart';
+import 'features/sortie/presentation/pages/arrival_status_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final secureStorage = const FlutterSecureStorage();
 
   final dio = Dio(
     BaseOptions(
@@ -28,7 +34,18 @@ void main() {
     ),
   );
 
-  final secureStorage = const FlutterSecureStorage();
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = AuthSessionMemory.token ?? await secureStorage.read(key: 'auth_token');
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        options.headers['Accept'] = 'application/json';
+        return handler.next(options);
+      },
+    ),
+  );
   final authRemoteDataSource = AuthRemoteDataSourceImpl(dio: dio);
   final authRepository = AuthRepositoryImpl(
     remoteDataSource: authRemoteDataSource,
@@ -66,7 +83,8 @@ class SortieParentApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>(
-          create: (_) => AuthBloc(authRepository: authRepository),
+          create: (_) => AuthBloc(authRepository: authRepository)
+            ..add(const CheckAuthStatusRequested()),
         ),
         BlocProvider<ArrivalBloc>(
           create: (_) => ArrivalBloc(
@@ -87,8 +105,31 @@ class SortieParentApp extends StatelessWidget {
           Locale('fr'),
           Locale('ar'),
         ],
-        home: const PhoneInputPage(),
+        home: const AppAuthRoot(),
       ),
+    );
+  }
+}
+
+class AppAuthRoot extends StatelessWidget {
+  const AppAuthRoot({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        if (state is AuthAuthenticated) {
+          return const ArrivalStatusPage();
+        }
+        if (state is AuthLoading || state is AuthInitial) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        return const LoginPage();
+      },
     );
   }
 }

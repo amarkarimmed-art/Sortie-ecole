@@ -202,5 +202,66 @@ void main() {
         const ArrivalFailure(NetworkArrivalException()),
       ],
     );
+
+    blocTest<ArrivalBloc, ArrivalState>(
+      'appelle getArrivalStatus et émet ArrivalSuccess lors de RefreshArrivalStatusRequested',
+      build: () {
+        when(() => mockArrivalRepository.getArrivalStatus()).thenAnswer(
+          (_) async => {
+            'arrival': {
+              'id': '550e8400-e29b-41d4-a716-446655440000',
+              'status': 'class_notified',
+              'text_fr': 'Votre enfant est appelé',
+            },
+            'pickup_requests': [
+              {
+                'id': 'req-1',
+                'status': 'class_notified',
+                'child': {
+                  'first_name': 'Adam',
+                  'last_name': 'Alami',
+                },
+              }
+            ],
+          },
+        );
+        return ArrivalBloc(
+          arrivalRepository: mockArrivalRepository,
+          locationService: mockLocationService,
+        );
+      },
+      act: (bloc) => bloc.add(const RefreshArrivalStatusRequested()),
+      expect: () => [
+        const ArrivalSuccess(
+          ArrivalResponse(
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'class_notified',
+            textFr: 'Votre enfant est appelé',
+          ),
+          realtimeStatus: 'class_notified',
+          childName: 'Adam Alami',
+        ),
+      ],
+      verify: (_) {
+        verify(() => mockArrivalRepository.getArrivalStatus()).called(1);
+      },
+    );
+
+    blocTest<ArrivalBloc, ArrivalState>(
+      'met à jour l\'état immédiatement lors de ArrivalRealtimeStatusUpdated',
+      build: () => ArrivalBloc(
+        arrivalRepository: mockArrivalRepository,
+        locationService: mockLocationService,
+      ),
+      seed: () => const ArrivalSuccess(testResponse),
+      act: (bloc) => bloc.add(const ArrivalRealtimeStatusUpdated('on_the_way', childName: 'Adam Alami')),
+      expect: () => [
+        const ArrivalSuccess(
+          testResponse,
+          realtimeStatus: 'on_the_way',
+          childName: 'Adam Alami',
+        ),
+      ],
+    );
   });
 }
