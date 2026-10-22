@@ -113,6 +113,18 @@ components:
           type: ["string", "null"]
           format: date-time
           description: Horodatage de l'appel de la classe (Africa/Casablanca). Null si non encore appelé.
+        parent_name:
+          type: ["string", "null"]
+          description: Nom du parent ayant signalé l'arrivée
+          example: "Karim Amar"
+        proximity_state:
+          type: ["string", "null"]
+          description: État de proximité (in_perimeter, approaching)
+          example: "in_perimeter"
+        distance_meters:
+          type: ["integer", "null"]
+          description: Distance mesurée en temps réel (en RAM)
+          example: 35
       required:
         - id
         - child_id
@@ -213,12 +225,121 @@ components:
           description: Identifiants des élèves concernés (fratrie)
         in_radius:
           type: boolean
-          description: Le parent est-il dans le rayon autorisé (200-300m)
+          description: Le parent est-il dans le rayon autorisé (calculé ou forcé)
+        distance_meters:
+          type: ["integer", "null"]
+          description: Non renseigné en mode GPS (Loi 09-08)
+        pos_lat:
+          type: number
+          format: float
+          description: Coordonnée GPS pour évaluation temps réel (jamais stockée)
+        pos_lng:
+          type: number
+          format: float
+          description: Coordonnée GPS pour évaluation temps réel (jamais stockée)
+        accuracy_meters:
+          type: number
+          format: float
+          description: Précision de la mesure GPS en mètres (<= 50m)
+        captured_at:
+          type: string
+          format: date-time
+          description: Horodatage de la capture GPS (<= 60s d'ancienneté)
+      required: [child_ids]
+
+    ScheduleStatus:
+      type: object
+      description: État dynamique des horaires de sortie et du périmètre de l'école
+      properties:
+        is_open:
+          type: boolean
+          description: La sortie est-elle actuellement ouverte
+        closes_at:
+          type: ["string", "null"]
+          description: Heure de fermeture au format HH:MM
+        next_opening_at:
+          type: ["string", "null"]
+          description: Heure de la prochaine ouverture au format HH:MM
+        perimeter_radius:
+          type: integer
+          description: Rayon du périmètre en mètres (10 à 500m)
+        opening_margin_minutes:
+          type: integer
+          description: Marge d'ouverture anticipée en minutes
+        is_ramadan_mode:
+          type: boolean
+          description: Interrupteur mode Ramadan actif
+        gate_configured:
+          type: boolean
+          description: Le portail a-t-il été positionné sur la carte
+        message_fr:
+          type: string
+          description: Message descriptif en français
+        message_ar:
+          type: string
+          description: Message descriptif en arabe
+      required:
+        - is_open
+        - perimeter_radius
+        - opening_margin_minutes
+        - is_ramadan_mode
+        - gate_configured
+        - message_fr
+        - message_ar
+
+    LocationEvaluationRequest:
+      type: object
+      description: Requête d'évaluation GPS en premier plan
+      properties:
+        pos_lat:
+          type: number
+          format: float
+          description: Coordonnée lat mesurée
+        pos_lng:
+          type: number
+          format: float
+          description: Coordonnée lng mesurée
+        accuracy_meters:
+          type: number
+          format: float
+          description: Précision GPS en mètres
+        captured_at:
+          type: string
+          format: date-time
+          description: Horodatage de la position GPS
+      required: [pos_lat, pos_lng]
+
+    LocationEvaluationResponse:
+      type: object
+      description: Résultat de l'évaluation GPS et statut de proximité
+      properties:
+        proximity_state:
+          type: string
+          enum: [in_perimeter, approaching, out_of_zone]
+          description: État de proximité par rapport au portail
         distance_meters:
           type: integer
-          minimum: 0
-          description: Distance arrondie aux 10m supérieurs (Loi 09-08)
-      required: [child_ids, in_radius]
+          description: Distance réelle au portail en mètres
+        perimeter_radius:
+          type: integer
+          description: Rayon limite configuré en mètres
+        can_signal_arrival:
+          type: boolean
+          description: Vrai si proximity_state est in_perimeter
+        schedule:
+          $ref: '#/components/schemas/ScheduleStatus'
+        message_fr:
+          type: string
+        message_ar:
+          type: string
+      required:
+        - proximity_state
+        - distance_meters
+        - perimeter_radius
+        - can_signal_arrival
+        - schedule
+        - message_fr
+        - message_ar
 
     PickupRequestSummary:
       type: object
@@ -682,6 +803,72 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           description: Transition invalide (la demande n'est pas au statut class_notified)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/schedule-status:
+    get:
+      operationId: getScheduleStatus
+      summary: Consulter le statut des horaires et du périmètre de l'école (F03)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Statut des horaires récupéré avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleStatus'
+        '404':
+          description: École introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schools/{schoolId}/arrivals/location:
+    post:
+      operationId: evaluateLocation
+      summary: Évaluer la position GPS en premier plan (F03)
+      security:
+        - sanctum: []
+      parameters:
+        - name: schoolId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationEvaluationRequest'
+      responses:
+        '200':
+          description: Évaluation de proximité calculée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationEvaluationResponse'
+        '404':
+          description: École introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Sortie fermée, précision GPS insuffisante ou position trop ancienne
           content:
             application/json:
               schema:

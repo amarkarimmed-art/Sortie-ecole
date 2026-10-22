@@ -25,6 +25,37 @@ class MockArrivalRemoteDataSource implements ArrivalRemoteDataSource {
     }
     return statusToReturn ?? {'arrival': null, 'pickup_requests': []};
   }
+
+  @override
+  Future<ScheduleStatusDto> getScheduleStatus() async {
+    if (errorToThrow != null) {
+      throw errorToThrow!;
+    }
+    return const ScheduleStatusDto(
+      isOpen: true,
+      closesAt: '17:30',
+      nextOpeningAt: null,
+      perimeterRadius: 50,
+      gateConfigured: true,
+      messageFr: 'Sortie en cours',
+      messageAr: 'الخروج مستمر',
+    );
+  }
+
+  @override
+  Future<LocationEvaluationResponseDto> evaluateLocation(
+    LocationEvaluationRequestDto request,
+  ) async {
+    if (errorToThrow != null) {
+      throw errorToThrow!;
+    }
+    return const LocationEvaluationResponseDto(
+      proximityState: 'in_perimeter',
+      distanceMeters: 25,
+      perimeterRadius: 50,
+      canSignalArrival: true,
+    );
+  }
 }
 
 void main() {

@@ -100,11 +100,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get loginErreurRoleNonAutorise =>
-      'الدخول مخصص فقط لأطر المدرسة (المراقبون، أعوان الاستقبال، الإدارة).';
+      'الولوج مخصص للمراقبين ومسؤولي الاستقبال';
 
   @override
   String get loginErreurTropDeTentatives =>
-      'محاولات كثيرة جداً. يرجى الانتظار بضع دقائق قبل إعادة المحاولة.';
+      'محاولات كثيرة، يرجى المحاولة بعد دقيقة';
 
   @override
   String get deconnexion => 'تسجيل الخروج';
@@ -195,4 +195,33 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get roleDirection => 'الإدارة';
+
+  @override
+  String get dansLePerimetre => 'داخل النطاق';
+
+  @override
+  String get enApproche => 'في الطريق';
+
+  @override
+  String sortieEnCours(String time) {
+    return 'الخروج مستمر حتى $time';
+  }
+
+  @override
+  String get sortieFermee => 'الخروج مغلق';
+
+  @override
+  String sortieCommenceA(String time) {
+    return 'الخروج مغلق، الافتتاح القادم عند $time';
+  }
+
+  @override
+  String nouvelleArrivee(String name) {
+    return 'وصول جديد : $name';
+  }
+
+  @override
+  String parentLabel(String name) {
+    return 'ولي الأمر : $name';
+  }
 }

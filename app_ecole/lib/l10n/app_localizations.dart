@@ -439,6 +439,48 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Direction'**
   String get roleDirection;
+
+  /// No description provided for @dansLePerimetre.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dans le périmètre'**
+  String get dansLePerimetre;
+
+  /// No description provided for @enApproche.
+  ///
+  /// In fr, this message translates to:
+  /// **'En approche'**
+  String get enApproche;
+
+  /// No description provided for @sortieEnCours.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie en cours jusqu\'à {time}'**
+  String sortieEnCours(String time);
+
+  /// No description provided for @sortieFermee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie fermée'**
+  String get sortieFermee;
+
+  /// No description provided for @sortieCommenceA.
+  ///
+  /// In fr, this message translates to:
+  /// **'Sortie fermée, prochaine ouverture à {time}'**
+  String sortieCommenceA(String time);
+
+  /// No description provided for @nouvelleArrivee.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nouvelle arrivée : {name}'**
+  String nouvelleArrivee(String name);
+
+  /// No description provided for @parentLabel.
+  ///
+  /// In fr, this message translates to:
+  /// **'Parent : {name}'**
+  String parentLabel(String name);
 }
 
 class _AppLocalizationsDelegate

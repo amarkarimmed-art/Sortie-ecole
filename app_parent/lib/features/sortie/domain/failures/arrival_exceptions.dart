@@ -47,3 +47,12 @@ class LocationPermissionDeniedException extends ArrivalException {
     super.message = 'L\'autorisation d\'accès à la position GPS a été refusée.',
   ]);
 }
+
+class WeakGpsSignalException extends ArrivalException {
+  final double accuracy;
+  const WeakGpsSignalException([
+    this.accuracy = 0,
+    super.message = 'Signal GPS trop faible. Précision insuffisante.',
+  ]);
+}
+

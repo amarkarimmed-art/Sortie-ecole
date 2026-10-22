@@ -34,6 +34,31 @@ class ArrivalRepositoryImpl implements ArrivalRepository {
     }
   }
 
+  @override
+  Future<ScheduleStatusDto> getScheduleStatus() async {
+    try {
+      return await remoteDataSource.getScheduleStatus();
+    } on DioException catch (dioError) {
+      throw _mapDioErrorToException(dioError);
+    } catch (e) {
+      if (e is ArrivalException) rethrow;
+      throw ServerArrivalException(e.toString());
+    }
+  }
+
+  @override
+  Future<LocationEvaluationResponseDto> evaluateLocation(
+      LocationEvaluationRequestDto request) async {
+    try {
+      return await remoteDataSource.evaluateLocation(request);
+    } on DioException catch (dioError) {
+      throw _mapDioErrorToException(dioError);
+    } catch (e) {
+      if (e is ArrivalException) rethrow;
+      throw ServerArrivalException(e.toString());
+    }
+  }
+
   ArrivalException _mapDioErrorToException(DioException error) {
     final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
@@ -45,13 +70,15 @@ class ArrivalRepositoryImpl implements ArrivalRepository {
 
     if (statusCode == 429) {
       return RateLimitException(
-        serverMessage ?? 'Trop de tentatives rapprochées. Veuillez patienter avant de signaler à nouveau.',
+        serverMessage ??
+            'Trop de tentatives rapprochées. Veuillez patienter avant de signaler à nouveau.',
       );
     }
 
     if (statusCode == 400 || statusCode == 422) {
       return OutOfRadiusException(
-        serverMessage ?? 'Vous devez être dans le rayon autorisé autour de l\'école pour signaler votre arrivée.',
+        serverMessage ??
+            'Vous devez être dans le rayon autorisé autour de l\'école pour signaler votre arrivée.',
       );
     }
 
@@ -63,7 +90,8 @@ class ArrivalRepositoryImpl implements ArrivalRepository {
 
     if (statusCode != null && statusCode >= 500) {
       return ServerArrivalException(
-        serverMessage ?? 'Erreur interne du serveur lors du traitement de l\'arrivée.',
+        serverMessage ??
+            'Erreur interne du serveur lors du traitement de l\'arrivée.',
       );
     }
 
@@ -79,7 +107,9 @@ class ArrivalRepositoryImpl implements ArrivalRepository {
         return const NetworkArrivalException('La requête a été annulée.');
       default:
         return ServerArrivalException(
-          serverMessage ?? error.message ?? 'Une erreur réseau inattendue est survenue.',
+          serverMessage ??
+              error.message ??
+              'Une erreur réseau inattendue est survenue.',
         );
     }
   }

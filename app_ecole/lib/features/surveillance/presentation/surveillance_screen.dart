@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:sortie_models/sortie_models.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/reverb_service.dart';
@@ -45,10 +46,12 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   late final SurveillanceRepository _repository;
   bool _ownsRepository = false;
   StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
+  StreamSubscription<ArrivalSignaledEvent>? _newArrivalSubscription;
 
   String? _effectiveToken;
   String? _schoolName;
   String? _schoolLogo;
+  ScheduleStatusDto? _scheduleStatus;
 
   @override
   void initState() {
@@ -90,6 +93,40 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
         });
       }
     });
+
+    // Écouter les nouvelles arrivées pour afficher une notification visuelle discrète
+    _newArrivalSubscription =
+        _repository.newArrivalAlerts.listen((event) {
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        final name = event.studentName ?? event.parentName ?? '';
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(
+            content: Text(
+              name.isNotEmpty && l10n != null
+                  ? l10n.nouvelleArrivee(name)
+                  : 'Nouvelle arrivée signalée au portail', // hardcoded-ok
+            ),
+            backgroundColor: Colors.teal.shade700,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+
+    _loadScheduleStatus();
+  }
+
+  Future<void> _loadScheduleStatus() async {
+    final status = await _repository.getScheduleStatus(
+      token: _effectiveToken ?? widget.token,
+    );
+    if (mounted && status != null) {
+      setState(() {
+        _scheduleStatus = status;
+      });
+    }
   }
 
   Future<void> _loadStorageInfo() async {
@@ -111,6 +148,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
             _schoolLogo = logo;
           }
         });
+        _loadScheduleStatus();
       }
     } catch (_) {}
   }
@@ -134,6 +172,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   @override
   void dispose() {
     _departedSubscription?.cancel();
+    _newArrivalSubscription?.cancel();
     _repository.reverbService.disconnect();
     if (_ownsRepository) {
       _repository.dispose();
@@ -284,18 +323,10 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
               if (state is SurveillanceLoaded) {
                 final grouped = state.groupedByClass;
 
-                if (grouped.isEmpty) {
-                  return Center(
-                    child: Text(
-                      l10n.aucunEleveAppele,
-                      style: const TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  );
-                }
-
                 return ListView(
                   padding: const EdgeInsetsDirectional.all(16.0),
                   children: [
+                    _buildScheduleStatusBanner(l10n),
                     if (state.isResyncing)
                       Container(
                         margin: const EdgeInsetsDirectional.only(bottom: 12.0),
@@ -322,12 +353,23 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                           ],
                         ),
                       ),
-                    ...grouped.entries.map((entry) => ClassGroupSection(
-                          className: entry.key,
-                          items: entry.value,
-                          repository: _repository,
-                          token: _effectiveToken ?? widget.token,
-                        )),
+                    if (grouped.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 48.0),
+                        child: Center(
+                          child: Text(
+                            l10n.aucunEleveAppele,
+                            style: const TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ),
+                      )
+                    else
+                      ...grouped.entries.map((entry) => ClassGroupSection(
+                            className: entry.key,
+                            items: entry.value,
+                            repository: _repository,
+                            token: _effectiveToken ?? widget.token,
+                          )),
                   ],
                 );
               }
@@ -336,6 +378,51 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildScheduleStatusBanner(AppLocalizations l10n) {
+    if (_scheduleStatus == null) return const SizedBox.shrink();
+    final isOpen = _scheduleStatus!.isOpen;
+    final closesAt = _scheduleStatus!.closesAt ?? '';
+    final nextOpeningAt = _scheduleStatus!.nextOpeningAt ?? '';
+
+    final bgColor = isOpen ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0);
+    final borderColor = isOpen ? Colors.green.shade400 : Colors.amber.shade400;
+    final textColor = isOpen ? Colors.green.shade900 : Colors.brown.shade800;
+
+    final String text = isOpen
+        ? (closesAt.isNotEmpty ? l10n.sortieEnCours(closesAt) : l10n.enDirect)
+        : (nextOpeningAt.isNotEmpty ? l10n.sortieCommenceA(nextOpeningAt) : l10n.sortieFermee);
+
+    return Container(
+      margin: const EdgeInsetsDirectional.only(bottom: 12.0),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14.0, vertical: 10.0),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10.0),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            isOpen ? Icons.check_circle_outline : Icons.access_time_rounded,
+            color: textColor,
+            size: 20,
+          ),
+          const SizedBox(width: 8.0),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

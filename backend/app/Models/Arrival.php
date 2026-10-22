@@ -24,6 +24,7 @@ class Arrival extends BaseModel
         return array_merge(parent::casts(), [
             'in_radius' => 'boolean',
             'distance_meters' => 'integer',
+            'proximity_state' => 'string',
         ]);
     }
 

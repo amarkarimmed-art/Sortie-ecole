@@ -184,11 +184,44 @@ class ParentReverbService {
     }
   }
 
+  factory ParentReverbService.fromApiUrl({
+    required String apiUrl,
+    required String schoolId,
+    required String userId,
+    ArrivalRepository? arrivalRepository,
+    String? appKey,
+    String? cluster,
+    bool? enableConnection,
+    PusherChannelsClient? client,
+  }) {
+    final uri = Uri.tryParse(apiUrl);
+    final host = (uri != null && uri.host.isNotEmpty) ? uri.host : '127.0.0.1';
+    final isHttps = uri != null && (uri.scheme == 'https' || uri.scheme == 'wss');
+    final wsScheme = isHttps ? 'wss' : 'ws';
+    final httpScheme = isHttps ? 'https' : 'http';
+    final reverbPort = 8080;
+    final apiPort = (uri != null && uri.hasPort) ? uri.port : 8000;
+
+    return ParentReverbService(
+      baseUrl: '$wsScheme://$host:$reverbPort',
+      schoolId: schoolId,
+      userId: userId,
+      authUrl: '$httpScheme://$host:$apiPort/broadcasting/auth',
+      appKey: appKey,
+      cluster: cluster,
+      enableConnection: enableConnection,
+      arrivalRepository: arrivalRepository,
+      client: client,
+    );
+  }
+
   void _startPeriodicSync() {
     _syncTimer?.cancel();
     if (_arrivalRepository == null) return;
 
-    _syncTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+    // Polling de secours toutes les 10 secondes lorsque la connexion WebSocket est coupée
+    _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      if (_isConnected) return; // Priorité au temps réel Reverb
       try {
         final data = await _arrivalRepository.getArrivalStatus();
         final pickupRequests = (data['pickup_requests'] as List?) ?? [];

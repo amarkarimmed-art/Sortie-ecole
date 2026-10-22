@@ -22,13 +22,11 @@ Broadcast::channel('school.{schoolId}.queue', function (User $user, string $scho
     $rolesAutorises = ['concierge', 'surveillant', 'director'];
 
     return in_array($user->role, $rolesAutorises, true)
-        && method_exists($user, 'getSchoolId')
-        && $user->getSchoolId() === $schoolId;
+        && (string) $user->getSchoolId() === (string) $schoolId;
 });
 
 Broadcast::channel('school.{schoolId}.parent.{userId}', function (User $user, string $schoolId, string $userId) {
     return $user->role === 'parent'
-        && method_exists($user, 'getSchoolId')
-        && $user->getSchoolId() === $schoolId
-        && (string) $user->id === $userId;
+        && (string) $user->getSchoolId() === (string) $schoolId
+        && (string) $user->id === (string) $userId;
 });

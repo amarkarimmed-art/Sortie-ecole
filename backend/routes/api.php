@@ -23,17 +23,28 @@ Route::post('/login', [AuthController::class, 'login'])->name('api.login');
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
     Route::get('/me', [AuthController::class, 'me'])->name('api.me');
+    Route::match(['get', 'post'], '/broadcasting/auth', [\Illuminate\Broadcasting\BroadcastController::class, 'authenticate'])
+        ->name('api.broadcasting.auth');
 });
 
 // ── Métier V1 ────────────────────────────────────────────────
 Route::prefix('v1')->group(function () {
     // ── Routes protégées (Sanctum) ──────────────────────────
     Route::middleware('auth:sanctum')->group(function () {
+        Route::match(['get', 'post'], '/broadcasting/auth', [\Illuminate\Broadcasting\BroadcastController::class, 'authenticate'])
+            ->name('api.v1.broadcasting.auth');
+
         // ── F01 : Import CSV élèves ─────────────────────────────
         Route::post('/schools/{school}/students/import', [StudentImportController::class, 'store'])
             ->name('students.import');
 
-        // ── F03 : « Je suis arrivé » ────────────────────────────
+        // ── F03 : « Je suis arrivé », Géolocalisation & Horaires ─
+        Route::get('/schools/{school}/schedule-status', [ArrivalController::class, 'scheduleStatus'])
+            ->name('arrivals.schedule-status');
+
+        Route::post('/schools/{school}/arrivals/location', [ArrivalController::class, 'evaluateLocation'])
+            ->name('arrivals.location');
+
         Route::post('/schools/{school}/arrivals', [ArrivalController::class, 'store'])
             ->name('arrivals.store');
 

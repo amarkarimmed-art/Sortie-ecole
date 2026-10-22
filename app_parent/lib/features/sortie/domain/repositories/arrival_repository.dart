@@ -8,4 +8,11 @@ abstract class ArrivalRepository {
 
   /// Récupère le statut de la dernière arrivée enregistrée.
   Future<Map<String, dynamic>> getArrivalStatus();
+
+  /// Récupère l'état dynamique des horaires de l'école (F03).
+  Future<ScheduleStatusDto> getScheduleStatus();
+
+  /// Évalue la position GPS en premier plan (F03).
+  Future<LocationEvaluationResponseDto> evaluateLocation(
+      LocationEvaluationRequestDto request);
 }

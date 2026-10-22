@@ -8,6 +8,9 @@ import '../../../../core/auth_session_memory.dart';
 abstract class ArrivalRemoteDataSource {
   Future<ArrivalResponse> signalArrival(ArrivalSignalRequest request);
   Future<Map<String, dynamic>> getArrivalStatus();
+  Future<ScheduleStatusDto> getScheduleStatus();
+  Future<LocationEvaluationResponseDto> evaluateLocation(
+      LocationEvaluationRequestDto request);
 }
 
 class ArrivalRemoteDataSourceImpl implements ArrivalRemoteDataSource {
@@ -29,7 +32,8 @@ class ArrivalRemoteDataSourceImpl implements ArrivalRemoteDataSource {
       resolvedSchoolId = await secureStorage?.read(key: 'auth_school_id');
     }
 
-    final token = AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
+    final token =
+        AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
     final idempotencyKey = _uuid.v4();
 
     final path = (resolvedSchoolId != null && resolvedSchoolId.isNotEmpty)
@@ -60,7 +64,8 @@ class ArrivalRemoteDataSourceImpl implements ArrivalRemoteDataSource {
       resolvedSchoolId = await secureStorage?.read(key: 'auth_school_id');
     }
 
-    final token = AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
+    final token =
+        AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
     final path = (resolvedSchoolId != null && resolvedSchoolId.isNotEmpty)
         ? '/v1/schools/$resolvedSchoolId/arrivals/status'
         : '/v1/arrivals/status';
@@ -78,5 +83,52 @@ class ArrivalRemoteDataSourceImpl implements ArrivalRemoteDataSource {
     );
 
     return response.data as Map<String, dynamic>;
+  }
+
+  @override
+  Future<ScheduleStatusDto> getScheduleStatus() async {
+    String? resolvedSchoolId = schoolId ?? AuthSessionMemory.schoolId;
+    if (resolvedSchoolId == null || resolvedSchoolId.isEmpty) {
+      resolvedSchoolId = await secureStorage?.read(key: 'auth_school_id');
+    }
+
+    final token =
+        AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
+    final path = '/v1/schools/$resolvedSchoolId/schedule-status';
+
+    final options = Options(
+      headers: {
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    final response = await dio.get(path, options: options);
+    return ScheduleStatusDto.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  @override
+  Future<LocationEvaluationResponseDto> evaluateLocation(
+      LocationEvaluationRequestDto request) async {
+    String? resolvedSchoolId = schoolId ?? AuthSessionMemory.schoolId;
+    if (resolvedSchoolId == null || resolvedSchoolId.isEmpty) {
+      resolvedSchoolId = await secureStorage?.read(key: 'auth_school_id');
+    }
+
+    final token =
+        AuthSessionMemory.token ?? await secureStorage?.read(key: 'auth_token');
+    final path = '/v1/schools/$resolvedSchoolId/arrivals/location';
+
+    final options = Options(
+      headers: {
+        'Accept': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+    );
+
+    final response =
+        await dio.post(path, data: request.toJson(), options: options);
+    return LocationEvaluationResponseDto.fromJson(
+        response.data as Map<String, dynamic>);
   }
 }

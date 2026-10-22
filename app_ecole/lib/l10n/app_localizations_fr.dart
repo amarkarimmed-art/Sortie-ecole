@@ -201,4 +201,33 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get roleDirection => 'Direction';
+
+  @override
+  String get dansLePerimetre => 'Dans le périmètre';
+
+  @override
+  String get enApproche => 'En approche';
+
+  @override
+  String sortieEnCours(String time) {
+    return 'Sortie en cours jusqu\'à $time';
+  }
+
+  @override
+  String get sortieFermee => 'Sortie fermée';
+
+  @override
+  String sortieCommenceA(String time) {
+    return 'Sortie fermée, prochaine ouverture à $time';
+  }
+
+  @override
+  String nouvelleArrivee(String name) {
+    return 'Nouvelle arrivée : $name';
+  }
+
+  @override
+  String parentLabel(String name) {
+    return 'Parent : $name';
+  }
 }

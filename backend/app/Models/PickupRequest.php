@@ -45,6 +45,7 @@ class PickupRequest extends BaseModel
         'called_at',
         'departed_by_user_id',
         'departed_at',
+        'proximity_state',
     ];
 
     protected function casts(): array
@@ -52,6 +53,7 @@ class PickupRequest extends BaseModel
         return array_merge(parent::casts(), [
             'in_radius' => 'boolean',
             'distance_meters' => 'integer',
+            'proximity_state' => 'string',
             'called_at' => 'datetime',
             'departed_at' => 'datetime',
         ]);

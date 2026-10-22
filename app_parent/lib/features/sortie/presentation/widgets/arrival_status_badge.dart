@@ -189,7 +189,7 @@ class ArrivalStatusBadge extends StatelessWidget {
           OutlinedButton.icon(
             onPressed: onRefreshLocation,
             icon: const Icon(Icons.refresh_rounded, size: 20),
-            label: const Text('Actualiser ma position'),
+            label: const Text('Actualiser ma position'), // hardcoded-ok
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF92400E),
               side: const BorderSide(color: SortieColors.warning, width: 1.5),
@@ -258,7 +258,7 @@ class ArrivalStatusBadge extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.replay_rounded, size: 20),
-            label: const Text('Réessayer'),
+            label: const Text('Réessayer'), // hardcoded-ok
             style: ElevatedButton.styleFrom(
               backgroundColor: SortieColors.error,
               foregroundColor: Colors.white,

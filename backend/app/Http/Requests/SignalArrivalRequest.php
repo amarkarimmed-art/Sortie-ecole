@@ -45,8 +45,16 @@ class SignalArrivalRequest extends FormRequest
         return [
             'child_ids' => ['required', 'array', 'min:1'],
             'child_ids.*' => ['required', 'uuid'],
-            'in_radius' => ['required', 'boolean'],
+            'in_radius' => ['nullable', 'boolean'],
             'distance_meters' => ['nullable', 'integer', 'min:0'],
+            'pos_lat' => ['nullable', 'numeric'],
+            'pos_lng' => ['nullable', 'numeric'],
+            'lat' => ['nullable', 'numeric'],
+            'lng' => ['nullable', 'numeric'],
+            'accuracy_meters' => ['nullable', 'numeric'],
+            'accuracy' => ['nullable', 'numeric'],
+            'captured_at' => ['nullable'],
+            'timestamp' => ['nullable'],
         ];
     }
 }

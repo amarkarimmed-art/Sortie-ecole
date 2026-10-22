@@ -6,21 +6,9 @@
   "reessayer": "Réessayer",
   "erreurChargement": "Erreur lors du chargement de la file",
   "classeTitre": "Classe {className}",
-  "@classeTitre": {
-    "placeholders": {
-      "className": {
-        "type": "String"
-      }
-    }
-  },
+  "@classeTitre": { "placeholders": { "className": { "type": "String" } } },
   "heureAppel": "Appelé à {time}",
-  "@heureAppel": {
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
+  "@heureAppel": { "placeholders": { "time": { "type": "String" } } },
   "reconnexionReussie": "Reconnexion réussie — file resynchronisée",
   "enDirect": "En direct",
   "reconnexionEnCours": "Reconnexion...",
@@ -54,26 +42,14 @@
   "loginErreurTelephoneInvalide": "Numéro de téléphone invalide (format attendu : 06/07XXXXXXXX)",
   "loginTitreOtp": "Vérification du code SMS",
   "loginSousTitreOtp": "Saisissez le code secret à 6 chiffres envoyé au {phone}",
-  "@loginSousTitreOtp": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
+  "@loginSousTitreOtp": { "placeholders": { "phone": { "type": "String" } } },
   "loginOtpLabel": "Code de vérification",
   "loginOtpHint": "000000",
   "loginBoutonValider": "Valider et se connecter",
   "loginBoutonModifierNumero": "Modifier le numéro",
   "loginBoutonRenvoyer": "Renvoyer le code",
   "loginRenvoyerDans": "Renvoyer dans {seconds}s",
-  "@loginRenvoyerDans": {
-    "placeholders": {
-      "seconds": {
-        "type": "int"
-      }
-    }
-  },
+  "@loginRenvoyerDans": { "placeholders": { "seconds": { "type": "int" } } },
   "loginErreurOtpRequis": "Veuillez saisir le code à 6 chiffres",
   "loginErreurOtpInvalide": "Le code doit comporter exactement 6 chiffres",
   "loginErreurOtpEchoue": "Code SMS incorrect ou expiré. Veuillez réessayer.",
@@ -84,5 +60,16 @@
   "loginChangerLangue": "Changer la langue",
   "roleSurveillant": "Surveillant",
   "roleAgent": "Agent d'accueil",
-  "roleDirection": "Direction"
+  "roleDirection": "Direction",
+  "dansLePerimetre": "Dans le périmètre",
+  "enApproche": "En approche",
+  "sortieEnCours": "Sortie en cours jusqu'à {time}",
+  "@sortieEnCours": { "placeholders": { "time": { "type": "String" } } },
+  "sortieFermee": "Sortie fermée",
+  "sortieCommenceA": "Sortie fermée, prochaine ouverture à {time}",
+  "@sortieCommenceA": { "placeholders": { "time": { "type": "String" } } },
+  "nouvelleArrivee": "Nouvelle arrivée : {name}",
+  "@nouvelleArrivee": { "placeholders": { "name": { "type": "String" } } },
+  "parentLabel": "Parent : {name}",
+  "@parentLabel": { "placeholders": { "name": { "type": "String" } } }
 }

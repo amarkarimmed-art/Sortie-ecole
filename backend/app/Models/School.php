@@ -26,6 +26,10 @@ class School extends Model
             'is_suspended' => 'boolean',
             'gate_latitude' => 'float',
             'gate_longitude' => 'float',
+            'perimeter_radius' => 'integer',
+            'opening_margin_minutes' => 'integer',
+            'is_ramadan_mode' => 'boolean',
+            'manual_override_until' => 'datetime',
         ];
     }
 

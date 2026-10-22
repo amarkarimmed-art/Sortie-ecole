@@ -41,6 +41,12 @@ class ReverbService {
   final StreamController<PickupRequestDepartedEvent> _departedController =
       StreamController<PickupRequestDepartedEvent>.broadcast();
 
+  final StreamController<ArrivalSignaledEvent> _arrivalSignaledController =
+      StreamController<ArrivalSignaledEvent>.broadcast();
+
+  final StreamController<ParentApproachingEvent> _parentApproachingController =
+      StreamController<ParentApproachingEvent>.broadcast();
+
   final StreamController<void> _resyncController =
       StreamController<void>.broadcast();
 
@@ -62,6 +68,30 @@ class ReverbService {
         _cluster = cluster ?? 'mt1',
         _enableConnection = enableConnection ?? !isTestEnvironment,
         _client = client;
+
+  factory ReverbService.fromApiUrl({
+    required String apiUrl,
+    required String schoolId,
+    String? appKey,
+    String? cluster,
+    bool? enableConnection,
+  }) {
+    final uri = Uri.parse(apiUrl);
+    final host = uri.host.isNotEmpty
+        ? (uri.host == 'localhost' ? '127.0.0.1' : uri.host)
+        : '127.0.0.1';
+    final wsScheme = uri.scheme == 'https' ? 'wss' : 'ws';
+    final baseUrl = '$wsScheme://$host:8080';
+    final authUrl = '${uri.scheme}://$host:${uri.hasPort ? uri.port : 8000}/api/v1/broadcasting/auth';
+    return ReverbService(
+      baseUrl: baseUrl,
+      schoolId: schoolId,
+      authUrl: authUrl,
+      appKey: appKey,
+      cluster: cluster,
+      enableConnection: enableConnection,
+    );
+  }
 
   static bool get isTestEnvironment {
     if (const bool.fromEnvironment('flutter.test')) return true;
@@ -142,6 +172,14 @@ class ReverbService {
   /// Flux des événements pickup.departed (B4).
   Stream<PickupRequestDepartedEvent> get departedEvents =>
       _departedController.stream;
+
+  /// Flux des événements d'arrivée signalée.
+  Stream<ArrivalSignaledEvent> get arrivalSignaledEvents =>
+      _arrivalSignaledController.stream;
+
+  /// Flux des événements de parent en approche.
+  Stream<ParentApproachingEvent> get parentApproachingEvents =>
+      _parentApproachingController.stream;
 
   /// Flux de signalement de reconnexion pour rechargement complet (CA15).
   Stream<void> get resyncStream => _resyncController.stream;
@@ -259,6 +297,16 @@ class ReverbService {
           eventName.contains('pickup.departed')) {
         final departedEvent = PickupRequestDepartedEvent.fromJson(eventData);
         _departedController.add(departedEvent);
+      } else if (cleanName == 'arrival.signaled' ||
+          cleanName.endsWith('ArrivalSignaledEvent') ||
+          eventName.contains('arrival.signaled')) {
+        final arrivalEvent = ArrivalSignaledEvent.fromJson(eventData);
+        _arrivalSignaledController.add(arrivalEvent);
+      } else if (cleanName == 'parent.approaching' ||
+          cleanName.endsWith('ParentApproachingEvent') ||
+          eventName.contains('parent.approaching')) {
+        final approachingEvent = ParentApproachingEvent.fromJson(eventData);
+        _parentApproachingController.add(approachingEvent);
       }
     } catch (_) {
       // Ignorer les messages malformés
@@ -273,6 +321,16 @@ class ReverbService {
   /// Injecter manuellement un événement de départ (utile pour les tests ou simulation).
   void emitDepartedEvent(PickupRequestDepartedEvent event) {
     _departedController.add(event);
+  }
+
+  /// Injecter manuellement un événement d'arrivée signalée.
+  void emitArrivalSignaledEvent(ArrivalSignaledEvent event) {
+    _arrivalSignaledController.add(event);
+  }
+
+  /// Injecter manuellement un événement de parent en approche.
+  void emitParentApproachingEvent(ParentApproachingEvent event) {
+    _parentApproachingController.add(event);
   }
 
   /// Déclencher manuellement un signal de resynchronisation (simulation reconnexion).
@@ -309,8 +367,87 @@ class ReverbService {
     }
     await _calledController.close();
     await _departedController.close();
+    await _arrivalSignaledController.close();
+    await _parentApproachingController.close();
     await _resyncController.close();
     await _rawEventController.close();
     await _connectionController.close();
   }
 }
+
+class ArrivalSignaledEvent {
+  final String arrivalId;
+  final String? studentId;
+  final String? studentName;
+  final String? className;
+  final String? parentName;
+  final int? liveDistanceMeters;
+  final String proximityState;
+  final String? arrivedAt;
+
+  const ArrivalSignaledEvent({
+    required this.arrivalId,
+    this.studentId,
+    this.studentName,
+    this.className,
+    this.parentName,
+    this.liveDistanceMeters,
+    this.proximityState = 'in_perimeter',
+    this.arrivedAt,
+  });
+
+  factory ArrivalSignaledEvent.fromJson(Map<String, dynamic> json) {
+    final arrival = json['arrival'] is Map<String, dynamic>
+        ? json['arrival'] as Map<String, dynamic>
+        : json;
+    final student = json['student'] is Map<String, dynamic>
+        ? json['student'] as Map<String, dynamic>
+        : null;
+
+    final studentName = student != null
+        ? '${student['first_name'] ?? ''} ${student['last_name'] ?? ''}'.trim()
+        : (json['student_name'] as String? ?? json['child_name'] as String?);
+
+    return ArrivalSignaledEvent(
+      arrivalId: arrival['id']?.toString() ?? json['arrival_id']?.toString() ?? '',
+      studentId: student?['id']?.toString() ?? json['student_id']?.toString(),
+      studentName: studentName,
+      className: student?['class_name']?.toString() ?? json['class_name']?.toString(),
+      parentName: json['parent_name']?.toString(),
+      liveDistanceMeters: (json['live_distance_meters'] as num?)?.toInt() ??
+          (json['distance_meters'] as num?)?.toInt(),
+      proximityState: json['proximity_state']?.toString() ?? 'in_perimeter',
+      arrivedAt: arrival['arrived_at']?.toString() ?? json['arrived_at']?.toString(),
+    );
+  }
+}
+
+class ParentApproachingEvent {
+  final String parentId;
+  final String? parentName;
+  final List<dynamic> children;
+  final int? distanceMeters;
+  final String proximityState;
+  final String timestamp;
+
+  const ParentApproachingEvent({
+    required this.parentId,
+    this.parentName,
+    this.children = const [],
+    this.distanceMeters,
+    this.proximityState = 'approaching',
+    required this.timestamp,
+  });
+
+  factory ParentApproachingEvent.fromJson(Map<String, dynamic> json) {
+    return ParentApproachingEvent(
+      parentId: json['parent_id']?.toString() ?? '',
+      parentName: json['parent_name']?.toString(),
+      children: (json['children'] as List<dynamic>?) ?? [],
+      distanceMeters: (json['distance_meters'] as num?)?.toInt(),
+      proximityState: json['proximity_state']?.toString() ?? 'approaching',
+      timestamp: json['timestamp']?.toString() ?? '',
+    );
+  }
+}
+

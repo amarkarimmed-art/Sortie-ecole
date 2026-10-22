@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:clock/clock.dart';
 import 'package:dio/dio.dart';
+import 'package:sortie_models/sortie_models.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../shared/services/reverb_service.dart';
@@ -21,10 +23,17 @@ class SurveillanceRepository {
   final StreamController<SurveillanceState> _stateController =
       StreamController<SurveillanceState>.broadcast();
 
+  final StreamController<ArrivalSignaledEvent> _newArrivalAlertController =
+      StreamController<ArrivalSignaledEvent>.broadcast();
+
   final List<SurveillanceItem> _currentItems = [];
   StreamSubscription<PickupRequestCalledEvent>? _calledSubscription;
   StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
+  StreamSubscription<ArrivalSignaledEvent>? _arrivalSignaledSubscription;
+  StreamSubscription<ParentApproachingEvent>? _parentApproachingSubscription;
   StreamSubscription<void>? _resyncSubscription;
+  StreamSubscription<bool>? _connectionSubscription;
+  Timer? _fallbackPollingTimer;
 
   String? _authToken;
 
@@ -39,9 +48,12 @@ class SurveillanceRepository {
         _reverbService = reverbService;
 
   Stream<SurveillanceState> get state => _stateController.stream;
+  Stream<ArrivalSignaledEvent> get newArrivalAlerts =>
+      _newArrivalAlertController.stream;
   List<SurveillanceItem> get currentItems => List.unmodifiable(_currentItems);
   ReverbService get reverbService => _reverbService;
   String get baseUrl => _baseUrl;
+  String get schoolId => _schoolId;
 
   void init() {
     // Écouter les événements temps réel pickup.called sans polling (CA14)
@@ -54,10 +66,67 @@ class SurveillanceRepository {
       _handleDepartedEvent(event);
     });
 
+    // Écouter les arrivées signalées en direct (Étape 7)
+    _arrivalSignaledSubscription =
+        _reverbService.arrivalSignaledEvents.listen((event) {
+      _handleArrivalSignaledEvent(event);
+    });
+
+    // Écouter les parents en approche en direct (Étape 7)
+    _parentApproachingSubscription =
+        _reverbService.parentApproachingEvents.listen((event) {
+      _handleParentApproachingEvent(event);
+    });
+
     // Écouter les reconnexions WebSocket pour recharger l'état complet (CA15)
     _resyncSubscription = _reverbService.resyncStream.listen((_) {
       reloadFromQueue(isResync: true);
     });
+
+    // Polling de secours toutes les 10 secondes si la connexion WebSocket est coupée
+    _connectionSubscription =
+        _reverbService.connectionStream.listen((isConnected) {
+      if (!isConnected) {
+        _startFallbackPolling();
+      } else {
+        _stopFallbackPolling();
+      }
+    });
+  }
+
+  void _startFallbackPolling() {
+    _fallbackPollingTimer?.cancel();
+    _fallbackPollingTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!_reverbService.isConnected) {
+        reloadFromQueue();
+      }
+    });
+  }
+
+  void _stopFallbackPolling() {
+    _fallbackPollingTimer?.cancel();
+    _fallbackPollingTimer = null;
+  }
+
+  /// Récupérer le statut des horaires de l'école (Étape 7)
+  Future<ScheduleStatusDto?> getScheduleStatus({String? token}) async {
+    final dio = _dio;
+    if (dio == null) return null;
+    try {
+      final effectiveToken = token ?? _authToken;
+      final headers = <String, dynamic>{
+        'Accept': 'application/json',
+        if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
+      };
+      final response = await dio.get(
+        '$_baseUrl/api/v1/schools/$_schoolId/schedule-status',
+        options: Options(headers: headers),
+      );
+      if (response.statusCode == 200 && response.data is Map<String, dynamic>) {
+        return ScheduleStatusDto.fromJson(response.data as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
   }
 
   /// Charger la file d'attente initiale depuis GET /schools/{schoolId}/queue.
@@ -124,14 +193,13 @@ class SurveillanceRepository {
   }
 
   void _handleCalledEvent(PickupRequestCalledEvent event) {
-    // Ne retenir que les événements de la même école
     if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
       return;
     }
 
-    final index = _currentItems.indexWhere((i) => i.requestId == event.requestId);
+    final index =
+        _currentItems.indexWhere((i) => i.requestId == event.requestId);
     if (index >= 0) {
-      // Déjà présent
       return;
     }
 
@@ -142,6 +210,75 @@ class SurveillanceRepository {
       items: List.from(_currentItems),
       isResyncing: false,
     ));
+  }
+
+  void _handleArrivalSignaledEvent(ArrivalSignaledEvent event) {
+    final index = _currentItems.indexWhere(
+      (i) =>
+          i.requestId == event.arrivalId ||
+          (event.studentId != null &&
+              event.studentId!.isNotEmpty &&
+              i.childId == event.studentId),
+    );
+
+    if (index >= 0) {
+      // Déjà présent : mise à jour
+      final existing = _currentItems[index];
+      _currentItems[index] = existing.copyWith(
+        liveDistanceMeters: event.liveDistanceMeters,
+        proximityState: event.proximityState,
+        parentName: event.parentName ?? existing.parentName,
+        arrivedAt: event.arrivedAt ?? existing.arrivedAt,
+      );
+    } else {
+      final rawName = event.studentName ?? '';
+      final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
+      final newItem = SurveillanceItem(
+        requestId: event.arrivalId,
+        childId: event.studentId ?? '',
+        childInitial: initial,
+        childName: rawName.isNotEmpty ? rawName : initial,
+        className: event.className ?? '',
+        calledAt: clock.now(),
+        status: 'class_notified',
+        parentName: event.parentName,
+        liveDistanceMeters: event.liveDistanceMeters,
+        proximityState: event.proximityState,
+        arrivedAt: event.arrivedAt,
+      );
+      _currentItems.add(newItem);
+      _newArrivalAlertController.add(event);
+    }
+
+    _stateController.add(SurveillanceLoaded(
+      items: List.from(_currentItems),
+      isResyncing: false,
+    ));
+  }
+
+  void _handleParentApproachingEvent(ParentApproachingEvent event) {
+    bool updated = false;
+    for (int i = 0; i < _currentItems.length; i++) {
+      final item = _currentItems[i];
+      final isChildApproaching = event.children.any(
+        (c) => c.toString() == item.childId || (c is Map && c['id'] == item.childId),
+      );
+      if (isChildApproaching || item.parentName == event.parentName) {
+        _currentItems[i] = item.copyWith(
+          liveDistanceMeters: event.distanceMeters,
+          proximityState: event.proximityState,
+          parentName: event.parentName ?? item.parentName,
+        );
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      _stateController.add(SurveillanceLoaded(
+        items: List.from(_currentItems),
+        isResyncing: false,
+      ));
+    }
   }
 
   /// Retirer une demande marquée partie de la file locale et notifier les écouteurs.
@@ -159,7 +296,6 @@ class SurveillanceRepository {
   }
 
   void _handleDepartedEvent(PickupRequestDepartedEvent event) {
-    // Ne retenir que les événements de la même école
     if (event.schoolId.isNotEmpty && event.schoolId != _schoolId) {
       return;
     }
@@ -168,11 +304,6 @@ class SurveillanceRepository {
   }
 
   /// Marquer le départ d'un élève (transition class_notified -> on_the_way).
-  ///
-  /// Envoie POST /api/v1/schools/{schoolId}/pickup-requests/{requestId}/depart
-  /// avec Idempotency-Key (UUID v4) et Bearer token.
-  /// Ne modifie pas l'état local directement : la file sera mise à jour
-  /// via l'écoute de l'événement WebSocket pickup.departed (B1, B4).
   Future<void> markDepart(String requestId, {String? token}) async {
     final dio = _dio;
     if (dio == null) return;
@@ -204,7 +335,12 @@ class SurveillanceRepository {
   void dispose() {
     _calledSubscription?.cancel();
     _departedSubscription?.cancel();
+    _arrivalSignaledSubscription?.cancel();
+    _parentApproachingSubscription?.cancel();
     _resyncSubscription?.cancel();
+    _connectionSubscription?.cancel();
+    _fallbackPollingTimer?.cancel();
+    _newArrivalAlertController.close();
     _stateController.close();
   }
 }

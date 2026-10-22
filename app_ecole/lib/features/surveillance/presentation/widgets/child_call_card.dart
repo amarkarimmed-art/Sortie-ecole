@@ -73,6 +73,13 @@ class _ChildCallCardState extends State<ChildCallCard> {
     final timeFormatter = DateFormat.Hm();
     final timeString = timeFormatter.format(widget.item.calledAt);
     final item = widget.item;
+    final isInPerimeter = item.proximityState == 'in_perimeter';
+    final proximityBadgeColor =
+        isInPerimeter ? Colors.green.shade100 : Colors.amber.shade100;
+    final proximityTextColor =
+        isInPerimeter ? Colors.green.shade900 : Colors.amber.shade900;
+    final proximityText =
+        isInPerimeter ? l10n.dansLePerimetre : l10n.enApproche;
 
     return Card(
       margin: const EdgeInsetsDirectional.only(bottom: 8.0),
@@ -99,7 +106,7 @@ class _ChildCallCardState extends State<ChildCallCard> {
                 ),
               ),
               const SizedBox(width: 12.0),
-              // Classe et heure
+              // Nom de l'enfant, parent et heure
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -110,6 +117,16 @@ class _ChildCallCardState extends State<ChildCallCard> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+                    if (item.parentName != null && item.parentName!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(top: 2.0),
+                        child: Text(
+                          l10n.parentLabel(item.parentName!),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 4.0),
                     Row(
                       children: [
@@ -131,23 +148,39 @@ class _ChildCallCardState extends State<ChildCallCard> {
                 ),
               ),
               const SizedBox(width: 8.0),
-              // Badge de statut class_notified
-              Container(
-                padding: const EdgeInsetsDirectional.symmetric(
-                  horizontal: 10.0,
-                  vertical: 4.0,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade100,
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                child: Text(
-                  l10n.statutPrevenu,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: Colors.amber.shade900,
-                    fontWeight: FontWeight.bold,
+              // Badge de proximité et distance en direct
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsetsDirectional.symmetric(
+                      horizontal: 8.0,
+                      vertical: 3.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: proximityBadgeColor,
+                      borderRadius: BorderRadius.circular(6.0),
+                    ),
+                    child: Text(
+                      proximityText,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: proximityTextColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  if (item.liveDistanceMeters != null) ...[
+                    const SizedBox(height: 2.0),
+                    Text(
+                      '${item.liveDistanceMeters} m', // hardcoded-ok
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(width: 8.0),
               // Bouton "Parti" (B1)

@@ -10,3 +10,6 @@ export 'src/child.dart';
 export 'src/arrival.dart';
 export 'src/arrival_signal_request.dart';
 export 'src/arrival_response.dart';
+export 'src/schedule_status_dto.dart';
+export 'src/location_evaluation_dto.dart';
+export 'src/queue_item_dto.dart';
