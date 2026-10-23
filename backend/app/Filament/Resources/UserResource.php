@@ -91,6 +91,32 @@ class UserResource extends Resource
                             ->searchable()
                             ->preload()
                             ->visible(fn (Forms\Get $get): bool => $get('role') === 'parent' || empty($get('role'))),
+
+                        Forms\Components\Select::make('schoolClasses')
+                            ->label('Classes assignées')
+                            ->relationship(
+                                'schoolClasses',
+                                'name',
+                                modifyQueryUsing: function (Builder $query, ?\Illuminate\Database\Eloquent\Model $record) {
+                                    $schoolId = \Filament\Facades\Filament::auth()->user()?->school_id ?? auth()->user()?->school_id;
+
+                                    return $query
+                                        ->where('school_classes.school_id', $schoolId)
+                                        ->where(function (Builder $q) use ($record) {
+                                            $q->whereDoesntHave('surveillants');
+                                            if ($record && $record->exists) {
+                                                $q->orWhereHas('surveillants', fn (Builder $sq) => $sq->where('users.id', $record->id));
+                                            }
+                                        });
+                                }
+                            )
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->visible(fn (Forms\Get $get): bool => $get('role') === 'surveillant')
+                            ->required(fn (Forms\Get $get): bool => $get('role') === 'surveillant')
+                            ->minItems(fn (Forms\Get $get): int => $get('role') === 'surveillant' ? 1 : 0)
+                            ->helperText('Chaque classe ne peut être assignée qu\'à un seul surveillant à la fois.'),
                     ]),
             ]);
     }
@@ -116,6 +142,10 @@ class UserResource extends Resource
 
                 Tables\Columns\TextColumn::make('children.first_name')
                     ->label('Enfants rattachés')
+                    ->badge(),
+
+                Tables\Columns\TextColumn::make('schoolClasses.name')
+                    ->label('Classes assignées')
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('phone')

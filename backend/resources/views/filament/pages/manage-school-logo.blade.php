@@ -127,13 +127,35 @@
                                 {{ $is_ramadan_mode ? 'Régime Ramadan' : 'Régime Normal' }}
                             </span>
                         </h3>
+                        @php
+                            $serverNow = \Carbon\Carbon::now('Africa/Casablanca');
+                            $dayNameFr = [1 => 'Lundi', 2 => 'Mardi', 3 => 'Mercredi', 4 => 'Jeudi', 5 => 'Vendredi', 6 => 'Samedi', 7 => 'Dimanche'][$serverNow->dayOfWeekIso];
+                            $serverTimeDisplay = $dayNameFr . ' ' . $serverNow->format('H:i');
+                            $liveStatus = $this->getLiveScheduleStatus();
+                        @endphp
+                        <div class="mt-2 flex flex-wrap items-center gap-3">
+                            <p class="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                                <span class="font-semibold text-gray-800 dark:text-gray-100">Heure actuelle du serveur (Africa/Casablanca) :</span> {{ $serverTimeDisplay }}
+                            </p>
+                            @if ($liveStatus['is_open'] ?? false)
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    {{ $liveStatus['message_fr'] ?? 'Sortie ouverte' }}
+                                </span>
+                            @else
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                    {{ $liveStatus['message_fr'] ?? 'Sortie fermée' }}
+                                </span>
+                            @endif
+                        </div>
                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Configurez les heures de sonnerie où le portail est ouvert aux arrivées.
                         </p>
                     </div>
 
-                    <button type="button" wire:click="copyDayToAll({{ $activeDay }})" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg transition">
-                        <x-heroicon-o-document-duplicate class="w-4 h-4" />
+                    <button type="button" wire:click="copyDayToAll({{ $activeDay }})" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 rounded-lg transition shadow-sm">
+                        <x-heroicon-o-document-duplicate class="w-4 h-4 text-primary-600" />
                         Copier ce jour vers tous les jours
                     </button>
                 </div>
@@ -149,16 +171,23 @@
                         6 => 'Samedi',
                         7 => 'Dimanche',
                     ];
+                    $todayIso = (int) \Carbon\Carbon::now('Africa/Casablanca')->dayOfWeekIso;
                 @endphp
 
                 <div class="flex flex-wrap gap-1.5 border-b border-gray-200 dark:border-gray-700 pb-3">
                     @foreach ($days as $num => $label)
                         @php
                             $countForDay = count(array_filter($windows, fn($w) => (int)$w['day_of_week'] === $num && (bool)$w['is_ramadan'] === $is_ramadan_mode));
+                            $isToday = ($num === $todayIso);
                         @endphp
                         <button type="button" wire:click="setActiveDay({{ $num }})"
                                 class="px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 {{ $activeDay === $num ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200' }}">
                             {{ $label }}
+                            @if ($isToday)
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold {{ $activeDay === $num ? 'bg-emerald-500 text-white ring-1 ring-white/50' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300' }}">
+                                    Aujourd'hui
+                                </span>
+                            @endif
                             @if ($countForDay > 0)
                                 <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $activeDay === $num ? 'bg-primary-800 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200' }}">
                                     {{ $countForDay }}
@@ -185,12 +214,12 @@
                                     <div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                                         <div class="flex-1">
                                             <label class="block text-[11px] font-medium text-gray-500 mb-1">Début (HH:MM)</label>
-                                            <input type="time" wire:model.defer="windows.{{ $index }}.start_time" class="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800" required>
+                                            <input type="time" wire:model.live="windows.{{ $index }}.start_time" class="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800" required>
                                         </div>
                                         <span class="text-gray-400 mt-4">&rarr;</span>
                                         <div class="flex-1">
                                             <label class="block text-[11px] font-medium text-gray-500 mb-1">Fin (HH:MM)</label>
-                                            <input type="time" wire:model.defer="windows.{{ $index }}.end_time" class="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800" required>
+                                            <input type="time" wire:model.live="windows.{{ $index }}.end_time" class="w-full text-xs rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800" required>
                                         </div>
                                         <div class="mt-4">
                                             <button type="button" wire:click="removeWindow({{ $index }})" class="p-1.5 text-rose-500 hover:text-rose-700 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">

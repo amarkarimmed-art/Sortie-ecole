@@ -127,5 +127,15 @@
   "nouvelleArrivee": "وصول جديد : {name}",
   "@nouvelleArrivee": { "description": "Notification nouvelle arrivée", "placeholders": { "name": { "type": "String" } } },
   "parentLabel": "ولي الأمر : {name}",
-  "@parentLabel": { "description": "Nom du parent", "placeholders": { "name": { "type": "String" } } }
+  "@parentLabel": { "description": "Nom du parent", "placeholders": { "name": { "type": "String" } } },
+  "boutonEnChemin": "في الطريق",
+  "@boutonEnChemin": { "description": "Bouton pour signaler que l'élève est en chemin" },
+  "boutonRemis": "تم التسليم",
+  "@boutonRemis": { "description": "Bouton pour valider la remise de l'élève" },
+  "statutDemandeEnClasse": "مطلوب / في القسم",
+  "@statutDemandeEnClasse": { "description": "Badge élève demandé" },
+  "statutEnCheminPortail": "في الطريق نحو البوابة",
+  "@statutEnCheminPortail": { "description": "Badge élève en chemin" },
+  "erreurHandover": "حدث خطأ أثناء تسليم التلميذ",
+  "@erreurHandover": { "description": "Erreur lors de la remise de l'élève" }
 }

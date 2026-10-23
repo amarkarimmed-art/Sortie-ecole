@@ -11,5 +11,5 @@ interface PickupWindowRepositoryInterface extends RepositoryInterface
     /**
      * Obtenir les fenêtres horaires pour une école et un jour donné.
      */
-    public function getWindowsForSchoolAndDay(string $schoolId, int $dayOfWeek): Collection;
+    public function getWindowsForSchoolAndDay(string $schoolId, int $dayOfWeek, ?bool $isRamadan = null): Collection;
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'theme.dart';
 
 class SortiePrimaryButton extends StatelessWidget {
   final String label;
@@ -17,10 +16,10 @@ class SortiePrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    final button = ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        minimumSize: const Size.fromHeight(52), // Target tactile ≥ 48dp
+        minimumSize: const Size(64, 52), // Target tactile ≥ 48dp
       ),
       child: isLoading
           ? const SizedBox(
@@ -49,6 +48,22 @@ class SortiePrimaryButton extends StatelessWidget {
                 ),
               ],
             ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.hasBoundedWidth) {
+          return SizedBox(
+            width: constraints.maxWidth,
+            height: 52,
+            child: button,
+          );
+        }
+        return SizedBox(
+          height: 52,
+          child: button,
+        );
+      },
     );
   }
 }

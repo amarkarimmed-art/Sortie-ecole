@@ -481,6 +481,36 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Parent : {name}'**
   String parentLabel(String name);
+
+  /// No description provided for @boutonEnChemin.
+  ///
+  /// In fr, this message translates to:
+  /// **'En chemin'**
+  String get boutonEnChemin;
+
+  /// No description provided for @boutonRemis.
+  ///
+  /// In fr, this message translates to:
+  /// **'Remis'**
+  String get boutonRemis;
+
+  /// No description provided for @statutDemandeEnClasse.
+  ///
+  /// In fr, this message translates to:
+  /// **'Demandé / En classe'**
+  String get statutDemandeEnClasse;
+
+  /// No description provided for @statutEnCheminPortail.
+  ///
+  /// In fr, this message translates to:
+  /// **'En chemin vers le portail'**
+  String get statutEnCheminPortail;
+
+  /// No description provided for @erreurHandover.
+  ///
+  /// In fr, this message translates to:
+  /// **'Erreur lors de la remise de l\'élève'**
+  String get erreurHandover;
 }
 
 class _AppLocalizationsDelegate

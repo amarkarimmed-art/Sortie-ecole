@@ -230,4 +230,19 @@ class AppLocalizationsFr extends AppLocalizations {
   String parentLabel(String name) {
     return 'Parent : $name';
   }
+
+  @override
+  String get boutonEnChemin => 'En chemin';
+
+  @override
+  String get boutonRemis => 'Remis';
+
+  @override
+  String get statutDemandeEnClasse => 'Demandé / En classe';
+
+  @override
+  String get statutEnCheminPortail => 'En chemin vers le portail';
+
+  @override
+  String get erreurHandover => 'Erreur lors de la remise de l\'élève';
 }

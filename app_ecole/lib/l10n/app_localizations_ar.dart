@@ -224,4 +224,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String parentLabel(String name) {
     return 'ولي الأمر : $name';
   }
+
+  @override
+  String get boutonEnChemin => 'في الطريق';
+
+  @override
+  String get boutonRemis => 'تم التسليم';
+
+  @override
+  String get statutDemandeEnClasse => 'مطلوب / في القسم';
+
+  @override
+  String get statutEnCheminPortail => 'في الطريق نحو البوابة';
+
+  @override
+  String get erreurHandover => 'حدث خطأ أثناء تسليم التلميذ';
 }

@@ -117,11 +117,16 @@ class AppAuthRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
+      buildWhen: (previous, current) {
+        // Ne pas reconstruire la racine lors de AuthLoading (la page courante gère son propre chargement)
+        if (current is AuthLoading) return false;
+        return previous.runtimeType != current.runtimeType;
+      },
       builder: (context, state) {
         if (state is AuthAuthenticated) {
           return const ArrivalStatusPage();
         }
-        if (state is AuthLoading || state is AuthInitial) {
+        if (state is AuthInitial) {
           return const Scaffold(
             body: Center(
               child: CircularProgressIndicator(),

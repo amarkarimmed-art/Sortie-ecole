@@ -37,7 +37,8 @@ class PickupScheduleService
                 ]);
             }
 
-            if ($startTime >= $endTime) {
+            $isOvernight = ($startTime >= '20:00' && $endTime <= '08:00');
+            if ($startTime === $endTime || ($startTime > $endTime && ! $isOvernight)) {
                 throw ValidationException::withMessages([
                     "windows.{$index}" => "L'heure de début ({$startTime}) doit être strictement antérieure à l'heure de fin ({$endTime}).",
                 ]);
@@ -90,13 +91,46 @@ class PickupScheduleService
      *     message_ar: string
      * }
      */
+    /**
+     * Alias centralisé pour getScheduleStatus / getCurrentStatus.
+     *
+     * @param School $school
+     * @param Carbon|null $now
+     * @return array<string, mixed>
+     */
+    public function getScheduleStatus(School $school, ?Carbon $now = null): array
+    {
+        return $this->getCurrentStatus($school, $now);
+    }
+
+    /**
+     * Détermine l'état courant de l'école (ouverte/fermée, prochain horaire, etc.)
+     *
+     * @param School $school
+     * @param Carbon|null $referenceTime
+     * @return array{
+     *     is_open: bool,
+     *     closes_at: string|null,
+     *     next_opening_at: string|null,
+     *     opening_margin_minutes: int,
+     *     perimeter_radius: int,
+     *     is_ramadan_mode: bool,
+     *     gate_configured: bool,
+     *     message_fr: string,
+     *     message_ar: string
+     * }
+     */
     public function getCurrentStatus(School $school, ?Carbon $referenceTime = null): array
     {
-        $now = $referenceTime ?? Carbon::now(self::TIMEZONE);
-        $currentTime = $now->format('H:i:s');
+        $now = $referenceTime !== null
+            ? $referenceTime->copy()->setTimezone(self::TIMEZONE)
+            : Carbon::now(self::TIMEZONE);
+
         $currentDay = $now->dayOfWeekIso; // 1 = Lundi, 7 = Dimanche
+        $currentSeconds = ($now->hour * 3600) + ($now->minute * 60) + $now->second;
 
         $marginMinutes = (int) ($school->opening_margin_minutes ?? 10);
+        $marginSeconds = $marginMinutes * 60;
         $radius = (int) ($school->perimeter_radius ?? 50);
         $isRamadan = (bool) ($school->is_ramadan_mode ?? false);
 
@@ -117,7 +151,7 @@ class PickupScheduleService
 
         // 1. Contrôle du débrayage manuel (manual_override_state)
         if (! empty($school->manual_override_state)) {
-            $overrideUntil = $school->manual_override_until ? Carbon::parse($school->manual_override_until) : null;
+            $overrideUntil = $school->manual_override_until ? Carbon::parse($school->manual_override_until)->setTimezone(self::TIMEZONE) : null;
             $isOverrideActive = ($overrideUntil === null || $overrideUntil->isAfter($now));
 
             if ($isOverrideActive) {
@@ -164,25 +198,72 @@ class PickupScheduleService
         $nextWindow = null;
 
         foreach ($windows as $window) {
-            // Marge d'ouverture : start_time - opening_margin_minutes
-            $startCarbon = Carbon::createFromTimeString($window->start_time, self::TIMEZONE)
-                ->setDate($now->year, $now->month, $now->day);
-            $effectiveStart = $startCarbon->copy()->subMinutes($marginMinutes);
-            $endCarbon = Carbon::createFromTimeString($window->end_time, self::TIMEZONE)
-                ->setDate($now->year, $now->month, $now->day);
+            $startParts = explode(':', (string) $window->start_time);
+            $startSeconds = ((int) ($startParts[0] ?? 0)) * 3600 + ((int) ($startParts[1] ?? 0)) * 60 + ((int) ($startParts[2] ?? 0));
+            $openSeconds = max(0, $startSeconds - $marginSeconds);
 
-            if ($now->greaterThanOrEqualTo($effectiveStart) && $now->lessThanOrEqualTo($endCarbon)) {
-                $activeWindow = $window;
-                break;
+            $endParts = explode(':', (string) $window->end_time);
+            $endH = (int) ($endParts[0] ?? 0);
+            $endM = (int) ($endParts[1] ?? 0);
+            $endS = (int) ($endParts[2] ?? 0);
+            $endSeconds = ($endH * 3600) + ($endM * 60) + $endS;
+
+            // Si la plage finit à 23:59 ou 23:59:00, elle couvre jusqu'à 23:59:59 (86399 secondes)
+            if ($endH === 23 && $endM === 59) {
+                $endSeconds = 86399;
             }
 
-            if ($now->lessThan($effectiveStart) && $nextWindow === null) {
+            // Gestion des plages traversant minuit (ex. 23:00 -> 01:00)
+            if ($endSeconds < $startSeconds) {
+                if ($currentSeconds >= $openSeconds || $currentSeconds <= $endSeconds) {
+                    $activeWindow = $window;
+                    break;
+                }
+            } else {
+                if ($currentSeconds >= $openSeconds && $currentSeconds <= $endSeconds) {
+                    $activeWindow = $window;
+                    break;
+                }
+            }
+
+            // Prochaine plage aujourd'hui
+            if ($currentSeconds < $openSeconds && $nextWindow === null) {
                 $nextWindow = $window;
             }
         }
 
+        // Si aucune plage active aujourd'hui, vérifier si une plage d'hier traversant minuit est toujours active
+        if ($activeWindow === null) {
+            $yesterday = $currentDay === 1 ? 7 : $currentDay - 1;
+            // Justifié : lecture restreinte au school_id de l'école
+            $yesterdayWindows = PickupWindow::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->where('day_of_week', $yesterday)
+                ->where('is_ramadan', $isRamadan)
+                ->get();
+
+            foreach ($yesterdayWindows as $yWin) {
+                $yStartParts = explode(':', (string) $yWin->start_time);
+                $yStartSeconds = ((int) ($yStartParts[0] ?? 0)) * 3600 + ((int) ($yStartParts[1] ?? 0)) * 60 + ((int) ($yStartParts[2] ?? 0));
+
+                $yEndParts = explode(':', (string) $yWin->end_time);
+                $yEndH = (int) ($yEndParts[0] ?? 0);
+                $yEndM = (int) ($yEndParts[1] ?? 0);
+                $yEndS = (int) ($yEndParts[2] ?? 0);
+                $yEndSeconds = ($yEndH * 3600) + ($yEndM * 60) + $yEndS;
+                if ($yEndH === 23 && $yEndM === 59) {
+                    $yEndSeconds = 86399;
+                }
+
+                if ($yEndSeconds < $yStartSeconds && $currentSeconds <= $yEndSeconds) {
+                    $activeWindow = $yWin;
+                    break;
+                }
+            }
+        }
+
         if ($activeWindow !== null) {
-            $closesAt = substr($activeWindow->end_time, 0, 5);
+            $closesAt = substr((string) $activeWindow->end_time, 0, 5);
             return [
                 'is_open' => true,
                 'closes_at' => $closesAt,
@@ -197,7 +278,7 @@ class PickupScheduleService
         }
 
         if ($nextWindow !== null) {
-            $nextOpening = substr($nextWindow->start_time, 0, 5);
+            $nextOpening = substr((string) $nextWindow->start_time, 0, 5);
             return [
                 'is_open' => false,
                 'closes_at' => null,
@@ -220,7 +301,7 @@ class PickupScheduleService
             ->orderBy('start_time')
             ->first();
 
-        $nextOpening = $otherWindow ? substr($otherWindow->start_time, 0, 5) : null;
+        $nextOpening = $otherWindow ? substr((string) $otherWindow->start_time, 0, 5) : null;
 
         return [
             'is_open' => false,

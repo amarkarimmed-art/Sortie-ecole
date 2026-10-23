@@ -14,12 +14,17 @@ use App\Exceptions\Queue\HandoverImpossibleException;
 use App\Exceptions\Queue\IdempotencyConflictException;
 use App\Http\Controllers\BaseController;
 use App\Http\Resources\QueueItemResource;
+use App\Models\Arrival;
+use App\Models\Child;
 use App\Models\PickupRequest;
 use App\Models\School;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 /**
  * Contrôleur de la file d'attente tablette — F02 : Tablette d'accueil.
@@ -92,7 +97,7 @@ class QueueController extends BaseController
         }
 
         $validator = Validator::make($request->all(), [
-            'collector_type' => ['required', 'string'],
+            'collector_type' => ['nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
@@ -102,16 +107,32 @@ class QueueController extends BaseController
             ], 422);
         }
 
-        $pickupRequest = PickupRequest::where('school_id', $school->id)
+        $pickupRequest = PickupRequest::withoutGlobalScopes()
+            ->where('school_id', $school->id)
             ->where('id', $requestId)
             ->first();
+
+        if (! $pickupRequest) {
+            $today = Carbon::now('Africa/Casablanca')->toDateString();
+            $pickupRequest = PickupRequest::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->whereDate('created_at', $today)
+                ->where(function ($q) use ($requestId) {
+                    $q->where('arrival_id', $requestId)
+                        ->orWhere('child_id', $requestId)
+                        ->orWhere('requested_by', $requestId);
+                })
+                ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED])
+                ->latest('created_at')
+                ->first();
+        }
 
         if (! $pickupRequest) {
             abort(404, 'Demande introuvable.');
         }
 
-        $collectorType = (string) $request->input('collector_type');
-        $collectorId = $request->input('parent_user_id') ?? $request->input('authorized_person_id');
+        $collectorType = (string) ($request->input('collector_type') ?? 'parent');
+        $collectorId = $request->input('parent_user_id') ?? $request->input('authorized_person_id') ?? $pickupRequest->requested_by;
 
         try {
             $log = $action->handle(
@@ -271,9 +292,84 @@ class QueueController extends BaseController
             ], 422);
         }
 
-        $pickupRequest = PickupRequest::where('school_id', $school->id)
+        // 1. Cherche d'abord par PickupRequest::withoutGlobalScopes()->where('school_id', $school->id)->where('id', $requestId)->first().
+        // Justifié : recherche de la demande par son id primaire sans restriction de scope global
+        $pickupRequest = PickupRequest::withoutGlobalScopes()
+            ->where('school_id', $school->id)
             ->where('id', $requestId)
             ->first();
+
+        // 2. Si non trouvé par id, cherche la demande active du jour dans cette école par where('arrival_id', $requestId) OU where('child_id', $requestId) OU where('requested_by', $requestId) (latest('created_at')->first()).
+        if (! $pickupRequest) {
+            $today = Carbon::now('Africa/Casablanca')->toDateString();
+            // Justifié : recherche de secours multi-clé par arrival_id, child_id ou requested_by
+            $pickupRequest = PickupRequest::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->whereDate('created_at', $today)
+                ->where(function ($q) use ($requestId) {
+                    $q->where('arrival_id', $requestId)
+                        ->orWhere('child_id', $requestId)
+                        ->orWhere('requested_by', $requestId);
+                })
+                ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED])
+                ->latest('created_at')
+                ->first();
+        }
+
+        // 3. Si toujours non trouvé mais que $requestId correspond à un Child ou un User (parent) de cette école $school->id, crée à la volée la PickupRequest pour cet élève et marque-la directement en on_the_way !
+        if (! $pickupRequest) {
+            // Justifié : recherche d'un élève de l'école correspondant à requestId
+            $child = Child::withoutGlobalScopes()
+                ->where('school_id', $school->id)
+                ->where('id', $requestId)
+                ->first();
+
+            $parentUser = null;
+            if (! $child) {
+                // Justifié : recherche d'un tuteur de l'école correspondant à requestId
+                $parentUser = User::withoutGlobalScopes()
+                    ->where('school_id', $school->id)
+                    ->where('id', $requestId)
+                    ->first();
+                if ($parentUser) {
+                    $child = $parentUser->children()->first();
+                }
+            } else {
+                $parentUser = $child->parents()->first();
+            }
+
+            if ($child) {
+                $today = Carbon::now('Africa/Casablanca')->toDateString();
+                // Justifié : recherche de l'arrivée du jour pour la création à la volée
+                $arrival = Arrival::withoutGlobalScopes()
+                    ->where('school_id', $school->id)
+                    ->when($parentUser, fn ($q) => $q->where('user_id', $parentUser->id))
+                    ->whereDate('created_at', $today)
+                    ->latest('created_at')
+                    ->first();
+
+                if (! $arrival && $parentUser) {
+                    $arrival = Arrival::create([
+                        'school_id' => $school->id,
+                        'user_id' => $parentUser->id,
+                        'in_radius' => true,
+                        'proximity_state' => 'in_perimeter',
+                        'idempotency_key' => (string) Str::uuid(),
+                    ]);
+                }
+
+                $pickupRequest = PickupRequest::create([
+                    'school_id' => $school->id,
+                    'arrival_id' => $arrival?->id,
+                    'child_id' => $child->id,
+                    'requested_by' => $parentUser?->id ?? $user->id,
+                    'status' => PickupRequest::STATUS_REQUESTED,
+                    'in_radius' => true,
+                    'proximity_state' => 'in_perimeter',
+                    'idempotency_key' => (string) Str::uuid(),
+                ]);
+            }
+        }
 
         if (! $pickupRequest) {
             abort(404, 'Demande introuvable.');

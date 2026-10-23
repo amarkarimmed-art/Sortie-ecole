@@ -69,6 +69,11 @@ class PickupRequest extends BaseModel
         return $this->belongsTo(User::class, 'requested_by');
     }
 
+    public function requester(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
+    }
+
     public function arrival(): BelongsTo
     {
         return $this->belongsTo(Arrival::class);

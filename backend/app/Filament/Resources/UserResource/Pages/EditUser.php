@@ -27,6 +27,13 @@ class EditUser extends EditRecord
         return $data;
     }
 
+    protected function afterSave(): void
+    {
+        if ($this->record->role !== 'surveillant') {
+            $this->record->schoolClasses()->detach();
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [

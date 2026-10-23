@@ -73,6 +73,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        umask(0000);
+        $uid = function_exists('posix_geteuid') ? posix_geteuid() : getmyuid();
+        $compiledViewPath = sys_get_temp_dir() . '/sortie_ecole_views_' . $uid;
+        if (! is_dir($compiledViewPath)) {
+            @mkdir($compiledViewPath, 0777, true);
+        }
+        config(['view.compiled' => $compiledViewPath]);
+
         // Fuseau horaire Africa/Casablanca (jamais de décalage fixe)
         date_default_timezone_set('Africa/Casablanca');
 

@@ -14,6 +14,7 @@ class SurveillanceItem extends Equatable {
   final DateTime calledAt;
   final String status;
   final String? parentName;
+  final String? parentUserId;
   final int? liveDistanceMeters;
   final String proximityState;
   final String? arrivedAt;
@@ -27,6 +28,7 @@ class SurveillanceItem extends Equatable {
     required this.calledAt,
     required this.status,
     this.parentName,
+    this.parentUserId,
     this.liveDistanceMeters,
     this.proximityState = 'in_perimeter',
     this.arrivedAt,
@@ -51,8 +53,9 @@ class SurveillanceItem extends Equatable {
       childName: rawName.isNotEmpty ? rawName : initial,
       className: json['class_name'] as String? ?? '',
       calledAt: calledAt,
-      status: json['status'] as String? ?? 'class_notified',
+      status: json['status'] as String? ?? 'requested',
       parentName: json['parent_name'] as String?,
+      parentUserId: json['parent_user_id'] as String?,
       liveDistanceMeters: (json['live_distance_meters'] as num?)?.toInt() ??
           (json['distance_meters'] as num?)?.toInt(),
       proximityState: json['proximity_state'] as String? ?? 'in_perimeter',
@@ -81,6 +84,7 @@ class SurveillanceItem extends Equatable {
     DateTime? calledAt,
     String? status,
     String? parentName,
+    String? parentUserId,
     int? liveDistanceMeters,
     String? proximityState,
     String? arrivedAt,
@@ -94,6 +98,7 @@ class SurveillanceItem extends Equatable {
       calledAt: calledAt ?? this.calledAt,
       status: status ?? this.status,
       parentName: parentName ?? this.parentName,
+      parentUserId: parentUserId ?? this.parentUserId,
       liveDistanceMeters: liveDistanceMeters ?? this.liveDistanceMeters,
       proximityState: proximityState ?? this.proximityState,
       arrivedAt: arrivedAt ?? this.arrivedAt,
@@ -110,6 +115,7 @@ class SurveillanceItem extends Equatable {
         calledAt,
         status,
         parentName,
+        parentUserId,
         liveDistanceMeters,
         proximityState,
         arrivedAt,

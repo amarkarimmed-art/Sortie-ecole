@@ -36,14 +36,20 @@ class QueueItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         $childName = trim(($this->child?->first_name ?? '').' '.($this->child?->last_name ?? ''));
+        $parentName = (string) ($this->requester?->name ?? '');
+        $parentUserId = (string) ($this->requested_by ?? '');
         $isSurveillant = ($request->user()?->role ?? Auth::user()?->role) === 'surveillant';
 
         return [
             'id' => (string) $this->id,
+            'request_id' => (string) $this->id,
             'child_id' => (string) $this->child_id,
             'child_name' => $childName,
-            'class_name' => $this->child?->class_name ?? '',
-            'status' => $this->status,
+            'class_name' => (string) ($this->child?->class_name ?? ''),
+            'parent_name' => $parentName,
+            'parent_user_id' => $parentUserId,
+            'status' => (string) $this->status,
+            'proximity_state' => (string) ($this->proximity_state ?? 'in_perimeter'),
             'waiting_zone' => null,
             'photo_url' => $isSurveillant ? null : $this->resolvePhotoUrl(),
             'created_at' => $this->created_at?->toIso8601String(),

@@ -10,12 +10,15 @@ use App\Events\ParentApproachingEvent;
 use App\Http\Controllers\BaseController;
 use App\Http\Requests\EvaluateLocationRequest;
 use App\Http\Requests\SignalArrivalRequest;
+use App\Models\Arrival;
+use App\Models\PickupRequest;
 use App\Models\School;
 use App\Services\Geo\HaversineService;
 use App\Services\Schedule\PickupScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 /**
  * Contrôleur d'API pour les arrivées, la proximité GPS et le statut des horaires (F03).
@@ -107,23 +110,56 @@ class ArrivalController extends BaseController
         $radius = (int) ($school->perimeter_radius ?? 50);
         $proximityState = $haversine->evaluateProximity($distanceMeters, $radius);
 
-        // 6. Diffusion Reverb si 'approaching' ou 'in_perimeter' (en RAM uniquement !)
+        // 6. Diffusion Reverb si 'approaching' ou 'in_perimeter'
         if (in_array($proximityState, ['approaching', 'in_perimeter'], true)) {
-            $children = $user->children()->get()->map(function ($child) {
-                return [
+            $today = $now->toDateString();
+            $childrenModels = $user->children()->get();
+
+            // Justifié : recherche d'une arrivée active du jour pour le parent
+            $arrival = Arrival::withoutGlobalScopes()
+                ->where('school_id', $schoolId)
+                ->where('user_id', $user->id)
+                ->whereDate('created_at', $today)
+                ->latest('created_at')
+                ->first();
+
+            if (! $arrival) {
+                $arrival = Arrival::create([
+                    'school_id' => $schoolId,
+                    'user_id' => $user->id,
+                    'in_radius' => ($proximityState === 'in_perimeter'),
+                    'distance_meters' => null, // Loi 09-08
+                    'proximity_state' => $proximityState,
+                    'idempotency_key' => (string) Str::uuid(),
+                ]);
+            }
+
+            $childrenPayload = [];
+            foreach ($childrenModels as $child) {
+                // Justifié : recherche de la demande de sortie active du jour pour cet enfant
+                $pickupReq = PickupRequest::withoutGlobalScopes()
+                    ->where('school_id', $schoolId)
+                    ->where('child_id', $child->id)
+                    ->whereDate('created_at', $today)
+                    ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED, PickupRequest::STATUS_HANDED_OVER])
+                    ->latest('created_at')
+                    ->first();
+
+                $childrenPayload[] = [
                     'id' => $child->id,
                     'first_name' => $child->first_name,
                     'last_name' => $child->last_name,
                     'class_name' => $child->class_name,
+                    'request_id' => $pickupReq ? (string) $pickupReq->id : null,
                 ];
-            })->all();
+            }
 
             try {
                 broadcast(new ParentApproachingEvent(
                     $schoolId,
                     (string) $user->id,
                     (string) $user->name,
-                    $children,
+                    $childrenPayload,
                     $distanceMeters,
                     $proximityState,
                     $now->toIso8601String()

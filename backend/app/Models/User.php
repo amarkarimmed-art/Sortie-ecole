@@ -101,6 +101,11 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(Arrival::class);
     }
 
+    public function schoolClasses(): BelongsToMany
+    {
+        return $this->belongsToMany(SchoolClass::class, 'school_class_user')->withTimestamps();
+    }
+
     public function pickupRequests(): HasMany
     {
         return $this->hasMany(PickupRequest::class, 'requested_by');

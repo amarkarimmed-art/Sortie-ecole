@@ -125,10 +125,19 @@ test('CA8 : deux appels simultanés à /depart avec la même clé renvoient deux
     expect($response1->json())->toEqual($response2->json());
 })->group('F04', 'CA8');
 
-test('CA9 : appel ou départ sur une demande terminale (handed_over, cancelled, expired) renvoie HTTP 422', function () {
+test('CA9 : départ sur handed_over renvoie 200 (idempotence), cancelled et expired renvoient 422', function () {
     $school = School::factory()->create();
 
-    foreach (['handedOver', 'cancelled', 'expired'] as $state) {
+    // handed_over : idempotence totale -> 200
+    $handedOverReq = PickupRequest::factory()->handedOver()->create([
+        'school_id' => $school->id,
+    ]);
+    actingAsSurveillant($school);
+    $departRes = markDepart($school, $handedOverReq);
+    $departRes->assertStatus(200);
+
+    // cancelled et expired -> 422
+    foreach (['cancelled', 'expired'] as $state) {
         $req = PickupRequest::factory()->$state()->create([
             'school_id' => $school->id,
         ]);
@@ -143,7 +152,7 @@ test('CA9 : appel ou départ sur une demande terminale (handed_over, cancelled, 
     }
 })->group('F04', 'CA9');
 
-test('CA19 : POST /depart sur une demande encore en requested est rejeté en HTTP 422 (R4)', function () {
+test('CA19 : POST /depart sur une demande en requested réussit avec HTTP 200 (on_the_way)', function () {
     $school = School::factory()->create();
     actingAsSurveillant($school);
 
@@ -153,7 +162,11 @@ test('CA19 : POST /depart sur une demande encore en requested est rejeté en HTT
 
     $response = markDepart($school, $request);
 
-    $response->assertStatus(422);
+    $response->assertStatus(200);
+    $response->assertJson([
+        'id' => $request->id,
+        'status' => 'on_the_way',
+    ]);
 })->group('F04', 'CA19');
 
 test('CA20 : après transition on_the_way, le parent voit on_the_way sur GET /arrivals/status', function () {

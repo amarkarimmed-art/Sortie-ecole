@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
         }
 
         // 8. Compte Surveillant démonstration (app_ecole)
-        User::withoutGlobalScopes()->updateOrCreate(
+        $surveillant = User::withoutGlobalScopes()->updateOrCreate(
             ['email' => 'surveillant@alamal'],
             [
                 'name' => 'Surveillant Al Amal',
@@ -106,6 +106,20 @@ class DatabaseSeeder extends Seeder
                 'locale' => 'fr',
             ]
         );
+
+        // Assigner d'office les classes disponibles aux surveillants qui n'en ont pas encore
+        $surveillants = User::withoutGlobalScopes()->where('role', 'surveillant')->get();
+        foreach ($surveillants as $srv) {
+            if ($srv->schoolClasses()->count() === 0 && $srv->school_id) {
+                $availableClasses = SchoolClass::withoutGlobalScopes()
+                    ->where('school_id', $srv->school_id)
+                    ->whereDoesntHave('surveillants')
+                    ->get();
+                if ($availableClasses->isNotEmpty()) {
+                    $srv->schoolClasses()->syncWithoutDetaching($availableClasses->pluck('id'));
+                }
+            }
+        }
 
         // 9. Compte Concierge démonstration (app_ecole)
         User::withoutGlobalScopes()->updateOrCreate(

@@ -105,7 +105,31 @@ class SignalArrivalAction extends BaseAction
             ->first();
 
         if ($existingArrival) {
-            return $existingArrival->load(['pickupRequests.child']);
+            $loaded = $existingArrival->load(['pickupRequests.child']);
+            $childrenPayload = [];
+            foreach ($loaded->pickupRequests as $pickupReq) {
+                $child = $pickupReq->child;
+                $childrenPayload[] = [
+                    'id' => $pickupReq->child_id,
+                    'first_name' => $child?->first_name,
+                    'last_name' => $child?->last_name,
+                    'class_name' => $child?->class_name,
+                    'request_id' => $pickupReq->id,
+                ];
+            }
+            try {
+                broadcast(new ArrivalSignaledEvent(
+                    $loaded,
+                    (string) $user->name,
+                    $childrenPayload,
+                    $liveDistance,
+                    $proximityState,
+                    $now->toIso8601String()
+                ))->toOthers();
+            } catch (\Throwable) {
+            }
+
+            return $loaded;
         }
 
         // 6. Évaluation GPS (si coordonnées fournies ou portail configuré en mode GPS)

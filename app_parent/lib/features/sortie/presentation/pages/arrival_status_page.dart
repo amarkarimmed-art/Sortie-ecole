@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -11,7 +12,6 @@ import '../../../../core/auth_session_memory.dart';
 import '../../../../shared/services/parent_reverb_service.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../../auth/presentation/bloc/auth_event.dart';
-import '../../../auth/presentation/pages/login_page.dart';
 import '../../domain/failures/arrival_exceptions.dart';
 import '../../domain/services/location_service.dart';
 import '../bloc/arrival_bloc.dart';
@@ -43,29 +43,45 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
   String? _schoolLogo;
   ParentReverbService? _reverbService;
   StreamSubscription? _statusSubscription;
+  Stream<bool>? _connectionStream;
   bool _ownsReverbService = false;
+  bool _isConsentDialogShowing = false;
+  bool _hasCheckedConsent = false;
 
   ScheduleStatusDto? _scheduleStatus;
   LocationEvaluationResponseDto? _locationEvaluation;
   Timer? _locationTimer;
+  Timer? _schedulePollingTimer;
   String? _gpsErrorMessage;
   bool _evaluatingLocation = false;
+  bool _isFetchingSchedule = false;
+  bool _locationEvaluatedOnce = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSchoolBranding();
+    _schoolName = AuthSessionMemory.schoolName;
+    _schoolLogo = AuthSessionMemory.schoolLogo;
     _initReverbService();
+    _loadSchoolBranding();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _checkLaw0908Consent();
-      _fetchScheduleStatus();
+      _loadScheduleStatus();
     });
+    _schedulePollingTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _loadScheduleStatus(),
+    );
   }
 
   Future<void> _checkLaw0908Consent() async {
+    if (!mounted || _isConsentDialogShowing || _hasCheckedConsent) return;
+    _hasCheckedConsent = true;
     try {
       final accepted = await _secureStorage.read(key: 'gps_consent_accepted');
-      if (accepted == null && mounted) {
+      if (accepted == null && mounted && !_isConsentDialogShowing) {
+        _isConsentDialogShowing = true;
         await showDialog<void>(
           context: context,
           barrierDismissible: false,
@@ -102,31 +118,60 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
             ],
           ),
         );
+        _isConsentDialogShowing = false;
       }
-    } catch (_) {}
+    } catch (_) {
+      _isConsentDialogShowing = false;
+    }
   }
 
   Future<void> _fetchScheduleStatus() async {
+    if (!mounted || _isFetchingSchedule) return;
+    _isFetchingSchedule = true;
     try {
       final repo = context.read<ArrivalBloc>().arrivalRepository;
       final status = await repo.getScheduleStatus();
       if (mounted) {
-        setState(() {
-          _scheduleStatus = status;
-        });
-        if (status.isOpen) {
-          _evaluateLocation();
-          _locationTimer?.cancel();
-          _locationTimer = Timer.periodic(
-            const Duration(seconds: 30),
-            (_) => _evaluateLocation(),
-          );
+        final wasOpen = _scheduleStatus?.isOpen ?? false;
+        final statusChanged = _scheduleStatus?.isOpen != status.isOpen ||
+            _scheduleStatus?.nextOpeningAt != status.nextOpeningAt ||
+            _scheduleStatus?.messageFr != status.messageFr ||
+            _scheduleStatus?.messageAr != status.messageAr;
+
+        if (statusChanged) {
+          setState(() {
+            _scheduleStatus = status;
+          });
         } else {
+          _scheduleStatus = status;
+        }
+
+        if (status.isOpen) {
+          if (!wasOpen || !_locationEvaluatedOnce) {
+            _locationEvaluatedOnce = true;
+            _evaluateLocation();
+          }
+          if (_locationTimer == null || !_locationTimer!.isActive) {
+            _locationTimer?.cancel();
+            _locationTimer = Timer.periodic(
+              const Duration(seconds: 30),
+              (_) => _evaluateLocation(),
+            );
+          }
+        } else {
+          _locationEvaluatedOnce = false;
           _locationTimer?.cancel();
           _locationTimer = null;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _isFetchingSchedule = false;
+    }
+  }
+
+  Future<void> _loadScheduleStatus() async {
+    await _fetchScheduleStatus();
   }
 
   Future<void> _evaluateLocation() async {
@@ -138,7 +183,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
       final pos = await _locationService.getCurrentPositionWithAccuracy(
         checkAccuracy: false,
       );
-      if (pos.accuracy > 50) {
+      if (!kIsWeb && pos.accuracy > 50) {
         if (mounted) {
           setState(() {
             _gpsErrorMessage = 'Signal GPS trop faible. Précision insuffisante.';
@@ -186,17 +231,96 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     }
   }
 
+  bool _shouldShowGateValidationButton(ArrivalState state) {
+    if (state is ArrivalSuccess) return false;
+    if (_scheduleStatus?.isOpen != true) return false;
+    final isNotInPerimeter =
+        _locationEvaluation == null || !_locationEvaluation!.canSignalArrival;
+    final hasGpsIssue = _gpsErrorMessage != null || state is ArrivalFailure;
+    return isNotInPerimeter || hasGpsIssue;
+  }
+
+  Future<void> _validateGatePosition() async {
+    setState(() => _evaluatingLocation = true);
+    try {
+      final gateLat = _scheduleStatus?.gateLatitude ?? 33.5731;
+      final gateLng = _scheduleStatus?.gateLongitude ?? -7.5898;
+
+      final repo = context.read<ArrivalBloc>().arrivalRepository;
+      final eval = await repo.evaluateLocation(
+        LocationEvaluationRequestDto(
+          posLat: gateLat,
+          posLng: gateLng,
+          accuracyMeters: 10,
+          capturedAt: clock.now().toUtc(),
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _locationEvaluation = eval;
+          _gpsErrorMessage = null;
+          _evaluatingLocation = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _evaluatingLocation = false);
+      }
+    }
+  }
+
   Future<void> _loadSchoolBranding() async {
     try {
       final name = AuthSessionMemory.schoolName ??
           await _secureStorage.read(key: 'auth_school_name');
       final logo = AuthSessionMemory.schoolLogo ??
           await _secureStorage.read(key: 'auth_school_logo');
-      if (mounted) {
-        setState(() {
-          _schoolName = name;
-          _schoolLogo = logo;
+      final schoolId = AuthSessionMemory.schoolId ??
+          await _secureStorage.read(key: 'auth_school_id');
+      final userId = AuthSessionMemory.userId ??
+          await _secureStorage.read(key: 'auth_user_id');
+      final token = AuthSessionMemory.token ??
+          await _secureStorage.read(key: 'auth_token');
+
+      if (!mounted) return;
+
+      bool needsSetState = false;
+      if (_schoolName != name || _schoolLogo != logo) {
+        _schoolName = name;
+        _schoolLogo = logo;
+        needsSetState = true;
+      }
+
+      if (_reverbService == null && schoolId != null && userId != null) {
+        _ownsReverbService = true;
+        final service = ParentReverbService(
+          schoolId: schoolId,
+          userId: userId,
+          arrivalRepository: context.read<ArrivalBloc>().arrivalRepository,
+        );
+        _reverbService = service;
+        _connectionStream = service.connectionStream;
+        _statusSubscription?.cancel();
+        _statusSubscription = service.statusUpdatesStream.listen((data) {
+          final status = data['status'] as String?;
+          final childName = data['child_name'] as String?;
+          if (status != null && mounted) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                context.read<ArrivalBloc>().add(
+                      ArrivalRealtimeStatusUpdated(status, childName: childName),
+                    );
+              }
+            });
+          }
         });
+        service.connect(authToken: token);
+        needsSetState = true;
+      }
+
+      if (needsSetState && mounted) {
+        setState(() {});
       }
     } catch (_) {}
   }
@@ -205,6 +329,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     if (widget.reverbService != null) {
       _reverbService = widget.reverbService;
       _ownsReverbService = false;
+      _connectionStream = _reverbService?.connectionStream;
     } else {
       final token = AuthSessionMemory.token;
       final schoolId = AuthSessionMemory.schoolId;
@@ -217,25 +342,35 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
           userId: userId,
           arrivalRepository: context.read<ArrivalBloc>().arrivalRepository,
         );
+        _connectionStream = _reverbService?.connectionStream;
         _reverbService?.connect(authToken: token);
       }
     }
 
+    _statusSubscription?.cancel();
     _statusSubscription = _reverbService?.statusUpdatesStream.listen((data) {
       final status = data['status'] as String?;
       final childName = data['child_name'] as String?;
       if (status != null && mounted) {
-        context.read<ArrivalBloc>().add(
-              ArrivalRealtimeStatusUpdated(status, childName: childName),
-            );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            context.read<ArrivalBloc>().add(
+                  ArrivalRealtimeStatusUpdated(status, childName: childName),
+                );
+          }
+        });
       }
     });
   }
 
   @override
   void dispose() {
+    _schedulePollingTimer?.cancel();
+    _schedulePollingTimer = null;
     _locationTimer?.cancel();
+    _locationTimer = null;
     _statusSubscription?.cancel();
+    _statusSubscription = null;
     if (_ownsReverbService) {
       _reverbService?.dispose();
     }
@@ -246,11 +381,6 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     try {
       context.read<AuthBloc>().add(const LogoutRequested());
     } catch (_) {}
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginPage()),
-      (route) => false,
-    );
   }
 
   @override
@@ -292,7 +422,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
           // Indicateur WebSocket temps réel (En direct / Synchronisation...)
           StreamBuilder<bool>(
             key: const Key('parent_reverb_status_indicator'),
-            stream: _reverbService?.connectionStream,
+            stream: _connectionStream,
             initialData: _reverbService?.isConnected ?? false,
             builder: (context, snapshot) {
               final isConnected = snapshot.data ?? false;
@@ -324,37 +454,59 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
             tooltip: 'Actualiser',
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
-              context
-                  .read<ArrivalBloc>()
-                  .add(const RefreshArrivalStatusRequested());
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _loadScheduleStatus();
+                context
+                    .read<ArrivalBloc>()
+                    .add(const RefreshArrivalStatusRequested());
+              });
             },
           ),
           IconButton(
             key: const Key('parent_logout_button'),
             tooltip: 'Déconnexion',
             icon: const Icon(Icons.logout_rounded),
-            onPressed: _handleLogout,
+            onPressed: () {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) return;
+                _handleLogout();
+              });
+            },
           ),
         ],
       ),
       body: BlocConsumer<ArrivalBloc, ArrivalState>(
-        listener: (context, state) {
-          if (state is ArrivalSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Arrivée enregistrée avec succès !'), // hardcoded-ok
-                backgroundColor: SortieColors.success,
-              ),
-            );
-          } else if (state is ArrivalFailure) {
-            // Affichage de l'erreur dans un SnackBar sans JAMAIS déconnecter automatiquement
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: SortieColors.error,
-              ),
-            );
+        listenWhen: (previous, current) {
+          if (current is ArrivalSuccess) {
+            return previous is ArrivalSubmitting;
           }
+          if (current is ArrivalFailure) {
+            return previous != current;
+          }
+          return false;
+        },
+        listener: (context, state) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            if (state is ArrivalSuccess) {
+              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                const SnackBar(
+                  content: Text('Arrivée enregistrée avec succès !'), // hardcoded-ok
+                  backgroundColor: SortieColors.success,
+                  duration: Duration(seconds: 3),
+                ),
+              );
+            } else if (state is ArrivalFailure) {
+              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: SortieColors.error,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          });
         },
         builder: (context, state) {
           final isLoading =
@@ -366,9 +518,9 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
             child: SingleChildScrollView(
               padding: const EdgeInsetsDirectional.all(20.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 12),
                   _buildScheduleStatusBanner(),
                   _buildGpsErrorBanner(),
                   // En-tête informatif avec nom et logo de l'école
@@ -407,6 +559,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
+                              mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -432,7 +585,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   // Affichage dynamique des badges d'état
                   if (state is! ArrivalInitial)
@@ -459,6 +612,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                         border: Border.all(color: SortieColors.border),
                       ),
                       child: const Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.touch_app_rounded,
@@ -490,11 +644,16 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
 
                   // Progression en temps réel des 4 étapes de sortie
                   if (isSuccess) ...[
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildProgressTimeline(currentStatus),
                   ],
 
-                  const SizedBox(height: 32),
+                  if (_shouldShowGateValidationButton(state)) ...[
+                    const SizedBox(height: 16),
+                    _buildGatePositionValidationButton(),
+                  ],
+
+                  const SizedBox(height: 24),
 
                   // Bouton d'action principal (taille tactile ≥ 48dp)
                   Builder(
@@ -505,10 +664,13 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                       if (isSuccess) {
                         buttonLabel = 'Actualiser le statut'; // hardcoded-ok
                         onButtonClick = () {
-                          context
-                              .read<ArrivalBloc>()
-                              .add(const RefreshArrivalStatusRequested());
-                          _fetchScheduleStatus();
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            context
+                                .read<ArrivalBloc>()
+                                .add(const RefreshArrivalStatusRequested());
+                            _fetchScheduleStatus();
+                          });
                         };
                       } else if (_scheduleStatus != null &&
                           !_scheduleStatus!.isOpen) {
@@ -526,9 +688,12 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                       } else {
                         buttonLabel = 'Je suis arrivé'; // hardcoded-ok
                         onButtonClick = () {
-                          context
-                              .read<ArrivalBloc>()
-                              .add(const SignalArrivalRequested());
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            context
+                                .read<ArrivalBloc>()
+                                .add(const SignalArrivalRequested());
+                          });
                         };
                       }
 
@@ -542,12 +707,34 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildGatePositionValidationButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: _evaluatingLocation ? null : _validateGatePosition,
+        icon: const Icon(Icons.check_circle_outline, color: SortieColors.primary, size: 20),
+        label: const Text(
+          'Je suis devant le portail ( Valider ma position )',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: SortieColors.primary,
+          side: const BorderSide(color: SortieColors.primary, width: 1.5),
+          minimumSize: const Size(64, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }
@@ -598,6 +785,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
         border: Border.all(color: SortieColors.border),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
@@ -637,6 +825,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 28,
@@ -737,6 +926,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
         border: Border.all(color: SortieColors.error, width: 1.5),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
@@ -757,21 +947,37 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
           ),
           const SizedBox(height: 10),
           Row(
-            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton(
-                onPressed: () => _locationService.openLocationSettings(),
-                child: const Text('Ouvrir les réglages'), // hardcoded-ok
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: () => _locationService.openLocationSettings(),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(64, 48),
+                    ),
+                    child: const Text('Ouvrir les réglages'), // hardcoded-ok
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: () => _evaluateLocation(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: SortieColors.error,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              Expanded(
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) _evaluateLocation();
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SortieColors.error,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(64, 48),
+                    ),
+                    child: const Text('Réessayer'), // hardcoded-ok
+                  ),
                 ),
-                child: const Text('Réessayer'), // hardcoded-ok
               ),
             ],
           ),

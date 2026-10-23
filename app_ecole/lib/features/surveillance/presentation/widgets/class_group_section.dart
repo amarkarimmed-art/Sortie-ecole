@@ -13,6 +13,7 @@ class ClassGroupSection extends StatelessWidget {
   final List<SurveillanceItem> items;
   final SurveillanceRepository? repository;
   final Future<void> Function(String requestId)? onDepart;
+  final Future<void> Function(String requestId, {String? parentUserId})? onHandover;
   final String? token;
 
   const ClassGroupSection({
@@ -21,6 +22,7 @@ class ClassGroupSection extends StatelessWidget {
     required this.items,
     this.repository,
     this.onDepart,
+    this.onHandover,
     this.token,
   });
 
@@ -83,6 +85,7 @@ class ClassGroupSection extends StatelessWidget {
                 item: item,
                 repository: repository,
                 onDepart: onDepart,
+                onHandover: onHandover,
                 token: token,
               )),
         ],

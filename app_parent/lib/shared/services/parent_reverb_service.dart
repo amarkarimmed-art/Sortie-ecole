@@ -215,13 +215,16 @@ class ParentReverbService {
     );
   }
 
+  bool _isSyncing = false;
+
   void _startPeriodicSync() {
     _syncTimer?.cancel();
     if (_arrivalRepository == null) return;
 
     // Polling de secours toutes les 10 secondes lorsque la connexion WebSocket est coupée
     _syncTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      if (_isConnected) return; // Priorité au temps réel Reverb
+      if (_isConnected || _isSyncing) return; // Priorité au temps réel Reverb
+      _isSyncing = true;
       try {
         final data = await _arrivalRepository.getArrivalStatus();
         final pickupRequests = (data['pickup_requests'] as List?) ?? [];
@@ -243,7 +246,10 @@ class ParentReverbService {
             });
           }
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        _isSyncing = false;
+      }
     });
   }
 

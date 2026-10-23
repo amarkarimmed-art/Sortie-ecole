@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:app_parent/features/sortie/domain/failures/arrival_exceptions.dart';
 import 'package:app_parent/features/sortie/presentation/bloc/arrival_bloc.dart';
 import 'package:app_parent/features/sortie/presentation/bloc/arrival_event.dart';
@@ -10,6 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sortie_models/sortie_models.dart';
+import 'package:sortie_ui/sortie_ui.dart';
 
 class MockArrivalBloc extends MockBloc<ArrivalEvent, ArrivalState>
     implements ArrivalBloc {}
@@ -23,6 +26,7 @@ void main() {
 
   Widget createWidgetUnderTest() {
     return MaterialApp(
+      theme: SortieTheme.lightTheme,
       home: BlocProvider<ArrivalBloc>.value(
         value: mockArrivalBloc,
         child: const ArrivalStatusPage(),
@@ -120,6 +124,43 @@ void main() {
       expect(find.text('Enfant en chemin vers le portail'), findsOneWidget);
       expect(find.text('Enfant remis — Bonne rentrée !'), findsOneWidget);
       expect(find.byKey(const Key('parent_reverb_status_indicator')), findsOneWidget);
+    });
+
+    testWidgets('survol souris (PointerDeviceKind.mouse) sans crash layout ni mouse_tracker dans tous les états', (tester) async {
+      final statesToTest = <ArrivalState>[
+        const ArrivalInitial(),
+        const ArrivalLocating(),
+        const ArrivalSuccess(
+          ArrivalResponse(
+            id: '550e8400-e29b-41d4-a716-446655440000',
+            status: 'processed',
+            textFr: 'Votre arrivée est enregistrée.',
+          ),
+        ),
+        const ArrivalFailure(OutOfRadiusException()),
+        const ArrivalFailure(NetworkArrivalException()),
+      ];
+
+      for (final state in statesToTest) {
+        when(() => mockArrivalBloc.state).thenReturn(state);
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pump();
+
+        final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await gesture.addPointer(location: Offset.zero);
+        await tester.pump();
+        await gesture.moveTo(const Offset(200, 100));
+        await tester.pump();
+        await gesture.moveTo(const Offset(200, 350));
+        await tester.pump();
+        await gesture.moveTo(const Offset(200, 550));
+        await tester.pump();
+
+        await gesture.removePointer();
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+      }
     });
   });
 }

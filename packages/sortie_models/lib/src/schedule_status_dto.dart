@@ -8,6 +8,8 @@ class ScheduleStatusDto extends Equatable {
   final int openingMarginMinutes;
   final bool isRamadanMode;
   final bool gateConfigured;
+  final double? gateLatitude;
+  final double? gateLongitude;
   final String messageFr;
   final String messageAr;
 
@@ -19,6 +21,8 @@ class ScheduleStatusDto extends Equatable {
     this.openingMarginMinutes = 10,
     this.isRamadanMode = false,
     this.gateConfigured = false,
+    this.gateLatitude,
+    this.gateLongitude,
     this.messageFr = '',
     this.messageAr = '',
   });
@@ -32,6 +36,8 @@ class ScheduleStatusDto extends Equatable {
       openingMarginMinutes: json['opening_margin_minutes'] as int? ?? 10,
       isRamadanMode: json['is_ramadan_mode'] as bool? ?? false,
       gateConfigured: json['gate_configured'] as bool? ?? false,
+      gateLatitude: (json['gate_latitude'] as num?)?.toDouble(),
+      gateLongitude: (json['gate_longitude'] as num?)?.toDouble(),
       messageFr: json['message_fr'] as String? ?? '',
       messageAr: json['message_ar'] as String? ?? '',
     );
@@ -46,6 +52,8 @@ class ScheduleStatusDto extends Equatable {
       'opening_margin_minutes': openingMarginMinutes,
       'is_ramadan_mode': isRamadanMode,
       'gate_configured': gateConfigured,
+      if (gateLatitude != null) 'gate_latitude': gateLatitude,
+      if (gateLongitude != null) 'gate_longitude': gateLongitude,
       'message_fr': messageFr,
       'message_ar': messageAr,
     };
@@ -60,6 +68,8 @@ class ScheduleStatusDto extends Equatable {
         openingMarginMinutes,
         isRamadanMode,
         gateConfigured,
+        gateLatitude,
+        gateLongitude,
         messageFr,
         messageAr,
       ];

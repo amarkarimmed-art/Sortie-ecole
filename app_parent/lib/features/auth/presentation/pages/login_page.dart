@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sortie_ui/sortie_ui.dart';
 
-import '../../../sortie/presentation/pages/arrival_status_page.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
@@ -29,12 +28,15 @@ class _LoginPageState extends State<LoginPage> {
 
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      context.read<AuthBloc>().add(
-            LoginSubmitted(
-              login: _loginController.text.trim(),
-              password: _passwordController.text,
-            ),
-          );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AuthBloc>().add(
+              LoginSubmitted(
+                login: _loginController.text.trim(),
+                password: _passwordController.text,
+              ),
+            );
+      });
     }
   }
 
@@ -44,10 +46,16 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: SortieColors.background,
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
-          if (state is AuthAuthenticated) {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ArrivalStatusPage()),
-            );
+          if (state is AuthFailure) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: SortieColors.error,
+                ),
+              );
+            });
           }
         },
         builder: (context, state) {

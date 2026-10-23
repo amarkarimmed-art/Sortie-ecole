@@ -377,6 +377,7 @@ class ReverbService {
 
 class ArrivalSignaledEvent {
   final String arrivalId;
+  final String? requestId;
   final String? studentId;
   final String? studentName;
   final String? className;
@@ -384,9 +385,11 @@ class ArrivalSignaledEvent {
   final int? liveDistanceMeters;
   final String proximityState;
   final String? arrivedAt;
+  final List<dynamic> children;
 
   const ArrivalSignaledEvent({
     required this.arrivalId,
+    this.requestId,
     this.studentId,
     this.studentName,
     this.className,
@@ -394,22 +397,31 @@ class ArrivalSignaledEvent {
     this.liveDistanceMeters,
     this.proximityState = 'in_perimeter',
     this.arrivedAt,
+    this.children = const [],
   });
 
   factory ArrivalSignaledEvent.fromJson(Map<String, dynamic> json) {
     final arrival = json['arrival'] is Map<String, dynamic>
         ? json['arrival'] as Map<String, dynamic>
         : json;
+    final firstChild = (json['children'] is List && (json['children'] as List).isNotEmpty && (json['children'] as List).first is Map<String, dynamic>)
+        ? (json['children'] as List).first as Map<String, dynamic>
+        : null;
     final student = json['student'] is Map<String, dynamic>
         ? json['student'] as Map<String, dynamic>
-        : null;
+        : firstChild;
 
     final studentName = student != null
         ? '${student['first_name'] ?? ''} ${student['last_name'] ?? ''}'.trim()
         : (json['student_name'] as String? ?? json['child_name'] as String?);
 
+    final reqId = json['request_id']?.toString() ??
+        firstChild?['request_id']?.toString() ??
+        student?['request_id']?.toString();
+
     return ArrivalSignaledEvent(
       arrivalId: arrival['id']?.toString() ?? json['arrival_id']?.toString() ?? '',
+      requestId: reqId,
       studentId: student?['id']?.toString() ?? json['student_id']?.toString(),
       studentName: studentName,
       className: student?['class_name']?.toString() ?? json['class_name']?.toString(),
@@ -418,6 +430,7 @@ class ArrivalSignaledEvent {
           (json['distance_meters'] as num?)?.toInt(),
       proximityState: json['proximity_state']?.toString() ?? 'in_perimeter',
       arrivedAt: arrival['arrived_at']?.toString() ?? json['arrived_at']?.toString(),
+      children: (json['children'] as List<dynamic>?) ?? [],
     );
   }
 }

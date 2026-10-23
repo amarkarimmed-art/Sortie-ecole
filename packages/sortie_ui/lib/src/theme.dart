@@ -43,7 +43,7 @@ class SortieTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: SortieColors.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52), // ≥ 48dp obligatoire
+          minimumSize: const Size(64, 52), // ≥ 48dp obligatoire
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

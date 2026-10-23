@@ -45,11 +45,14 @@ class ParentApproachingEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $primaryRequestId = $this->children[0]['request_id'] ?? null;
+
         return [
             'school_id' => $this->schoolId,
             'parent_id' => $this->parentId,
             'parent_name' => $this->parentName,
             'children' => $this->children,
+            'request_id' => $primaryRequestId,
             'distance_meters' => $this->distanceMeters,
             'proximity_state' => $this->proximityState,
             'timestamp' => $this->timestamp,

@@ -44,11 +44,23 @@ class ArrivalSignaledEvent implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $primaryRequestId = $this->children[0]['request_id'] ?? null;
+        $primaryChild = $this->children[0] ?? [];
+        $childName = trim(($primaryChild['first_name'] ?? '').' '.($primaryChild['last_name'] ?? ''));
+        $className = (string) ($primaryChild['class_name'] ?? '');
+
         return [
-            'arrival_id' => $this->arrival->id,
-            'school_id' => $this->arrival->school_id,
-            'parent_id' => $this->arrival->user_id,
+            'id' => (string) $primaryRequestId,
+            'request_id' => (string) $primaryRequestId,
+            'arrival_id' => (string) $this->arrival->id,
+            'school_id' => (string) $this->arrival->school_id,
+            'parent_id' => (string) $this->arrival->user_id,
+            'parent_user_id' => (string) $this->arrival->user_id,
             'parent_name' => $this->parentName,
+            'child_id' => (string) ($primaryChild['id'] ?? ''),
+            'child_name' => $childName,
+            'class_name' => $className,
+            'status' => 'requested',
             'children' => $this->children,
             'distance_meters' => $this->liveDistanceMeters,
             'proximity_state' => $this->proximityState,

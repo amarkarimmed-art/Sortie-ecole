@@ -71,5 +71,10 @@
   "nouvelleArrivee": "Nouvelle arrivée : {name}",
   "@nouvelleArrivee": { "placeholders": { "name": { "type": "String" } } },
   "parentLabel": "Parent : {name}",
-  "@parentLabel": { "placeholders": { "name": { "type": "String" } } }
+  "@parentLabel": { "placeholders": { "name": { "type": "String" } } },
+  "boutonEnChemin": "En chemin",
+  "boutonRemis": "Remis",
+  "statutDemandeEnClasse": "Demandé / En classe",
+  "statutEnCheminPortail": "En chemin vers le portail",
+  "erreurHandover": "Erreur lors de la remise de l'élève"
 }

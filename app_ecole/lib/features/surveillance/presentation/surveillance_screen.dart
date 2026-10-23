@@ -52,6 +52,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
   String? _schoolName;
   String? _schoolLogo;
   ScheduleStatusDto? _scheduleStatus;
+  Timer? _schedulePollingTimer;
 
   @override
   void initState() {
@@ -84,12 +85,12 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     _repository.loadInitialQueue(token: widget.token);
     _repository.reverbService.connect(authToken: widget.token);
 
-    // Écouter les événements pickup.departed pour évaporer la carte en temps réel
+    // Écouter les événements pickup.departed pour mettre à jour la carte en temps réel
     _departedSubscription =
         _repository.reverbService.departedEvents.listen((event) {
       if (mounted) {
         setState(() {
-          _repository.removeDeparted(event.requestId);
+          _repository.updateItemStatus(event.requestId, 'on_the_way');
         });
       }
     });
@@ -116,6 +117,10 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     });
 
     _loadScheduleStatus();
+    _schedulePollingTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _loadScheduleStatus(),
+    );
   }
 
   Future<void> _loadScheduleStatus() async {
@@ -171,6 +176,8 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
 
   @override
   void dispose() {
+    _schedulePollingTimer?.cancel();
+    _schedulePollingTimer = null;
     _departedSubscription?.cancel();
     _newArrivalSubscription?.cancel();
     _repository.reverbService.disconnect();
@@ -254,6 +261,15 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                   ],
                 ),
               );
+            },
+          ),
+          IconButton(
+            key: const Key('surveillance_btn_refresh'),
+            tooltip: 'Actualiser',
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () {
+              _loadScheduleStatus();
+              _repository.loadInitialQueue(token: _effectiveToken ?? widget.token);
             },
           ),
           IconButton(

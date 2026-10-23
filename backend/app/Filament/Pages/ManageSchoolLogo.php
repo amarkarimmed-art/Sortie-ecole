@@ -75,7 +75,23 @@ class ManageSchoolLogo extends Page implements HasForms
             'is_ramadan_mode'        => $this->is_ramadan_mode,
         ]);
 
+        $this->activeDay = (int) Carbon::now('Africa/Casablanca')->dayOfWeekIso;
+
         $this->loadWindows();
+    }
+
+    public function getCurrentServerTime(): string
+    {
+        return Carbon::now('Africa/Casablanca')->locale('fr')->isoFormat('dddd HH:mm');
+    }
+
+    public function getLiveScheduleStatus(): array
+    {
+        $school = $this->getSchool();
+        if (! $school) {
+            return ['is_open' => false, 'message_fr' => 'École introuvable'];
+        }
+        return (new PickupScheduleService())->getCurrentStatus($school, Carbon::now('Africa/Casablanca'));
     }
 
     public function loadWindows(): void
@@ -265,9 +281,15 @@ class ManageSchoolLogo extends Page implements HasForms
 
     public function copyDayToAll(int $sourceDay): void
     {
-        $sourceWindows = array_filter($this->windows, function ($w) use ($sourceDay) {
+        $school = $this->getSchool();
+        if (! $school) {
+            Notification::make()->danger()->title('Erreur')->body('Aucun établissement lié.')->send();
+            return;
+        }
+
+        $sourceWindows = array_values(array_filter($this->windows, function ($w) use ($sourceDay) {
             return (int) $w['day_of_week'] === $sourceDay && (bool) $w['is_ramadan'] === $this->is_ramadan_mode;
-        });
+        }));
 
         if (empty($sourceWindows)) {
             Notification::make()
@@ -278,30 +300,47 @@ class ManageSchoolLogo extends Page implements HasForms
             return;
         }
 
-        // Supprimer les plages existantes des autres jours pour ce régime
-        $this->windows = array_values(array_filter($this->windows, function ($w) use ($sourceDay) {
-            return (int) $w['day_of_week'] === $sourceDay || (bool) $w['is_ramadan'] !== $this->is_ramadan_mode;
-        }));
+        // Valider le format des plages sources
+        foreach ($sourceWindows as $sw) {
+            $s = substr((string) ($sw['start_time'] ?? ''), 0, 5);
+            $e = substr((string) ($sw['end_time'] ?? ''), 0, 5);
+            if (empty($s) || empty($e)) {
+                Notification::make()->danger()->title('Horaires incomplets')->body('Veuillez renseigner les heures de début et de fin.')->send();
+                return;
+            }
+            if ($s === $e) {
+                Notification::make()->danger()->title('Horaires invalides')->body("L'heure de début ({$s}) doit être différente de l'heure de fin ({$e}).")->send();
+                return;
+            }
+        }
 
-        // Copier vers les jours 1 à 7
+        // Préparer les nouvelles plages pour tous les 7 jours (1 à 7)
+        $otherRegimeWindows = array_filter($this->windows, function ($w) {
+            return (bool) ($w['is_ramadan'] ?? false) !== $this->is_ramadan_mode;
+        });
+
+        $newRegimeWindows = [];
         for ($day = 1; $day <= 7; $day++) {
-            if ($day === $sourceDay) continue;
-
             foreach ($sourceWindows as $sw) {
-                $this->windows[] = [
+                $newRegimeWindows[] = [
                     'id'          => null,
                     'day_of_week' => $day,
-                    'start_time'  => $sw['start_time'],
-                    'end_time'    => $sw['end_time'],
-                    'is_ramadan'  => $this->is_ramadan_mode,
+                    'start_time'  => substr((string) $sw['start_time'], 0, 5),
+                    'end_time'    => substr((string) $sw['end_time'], 0, 5),
+                    'is_ramadan'  => (bool) $this->is_ramadan_mode,
                 ];
             }
         }
 
+        $this->windows = array_values(array_merge($otherRegimeWindows, $newRegimeWindows));
+
+        // Enregistrer immédiatement en base de données sur tous les 7 jours
+        $this->save();
+
         Notification::make()
             ->success()
-            ->title('Plages copiées')
-            ->body('Les plages ont été dupliquées sur tous les jours de la semaine sans doublon.')
+            ->title('Plages copiées et enregistrées')
+            ->body('Plages copiées et enregistrées sur tous les jours de la semaine (du Lundi au Dimanche).')
             ->send();
     }
 
@@ -314,6 +353,7 @@ class ManageSchoolLogo extends Page implements HasForms
         }
 
         $formData = $this->form->getState();
+        $isRamadanMode = (bool) ($formData['is_ramadan_mode'] ?? $this->is_ramadan_mode);
 
         // 1. Validation des plages horaires via le service
         try {
@@ -324,8 +364,8 @@ class ManageSchoolLogo extends Page implements HasForms
             return;
         }
 
-        // 2. Mise à jour de l'école
-        DB::transaction(function () use ($school, $formData) {
+        // 2. Mise à jour de l'école et des plages horaires
+        DB::transaction(function () use ($school, $formData, $isRamadanMode) {
             $school->update([
                 'name'                   => $formData['name'],
                 'logo'                   => $formData['logo'] ?? $school->logo,
@@ -333,30 +373,40 @@ class ManageSchoolLogo extends Page implements HasForms
                 'gate_longitude'         => $formData['gate_longitude'] ? (float) $formData['gate_longitude'] : null,
                 'perimeter_radius'       => (int) ($formData['perimeter_radius'] ?? 50),
                 'opening_margin_minutes' => (int) ($formData['opening_margin_minutes'] ?? 10),
-                'is_ramadan_mode'        => (bool) ($formData['is_ramadan_mode'] ?? false),
+                'is_ramadan_mode'        => $isRamadanMode,
+                'manual_override_state'  => null,
+                'manual_override_until'  => null,
             ]);
 
             // Justifié : synchronisation des plages restreinte au school_id de l'école
             PickupWindow::withoutGlobalScopes()
                 ->where('school_id', $school->id)
+                ->where('is_ramadan', $isRamadanMode)
                 ->delete();
 
             foreach ($this->windows as $w) {
-                if (empty($w['start_time']) || empty($w['end_time'])) continue;
+                if ((bool) ($w['is_ramadan'] ?? false) !== $isRamadanMode) {
+                    continue;
+                }
+                if (empty($w['start_time']) || empty($w['end_time'])) {
+                    continue;
+                }
 
-                $startTime = strlen($w['start_time']) === 5 ? "{$w['start_time']}:00" : $w['start_time'];
-                $endTime   = strlen($w['end_time']) === 5 ? "{$w['end_time']}:00" : $w['end_time'];
+                $startTime = substr((string) $w['start_time'], 0, 5) . ':00';
+                $endTime   = substr((string) $w['end_time'], 0, 5) . ':00';
 
                 PickupWindow::create([
                     'school_id'   => $school->id,
                     'day_of_week' => (int) $w['day_of_week'],
                     'start_time'  => $startTime,
                     'end_time'    => $endTime,
-                    'is_ramadan'  => (bool) ($w['is_ramadan'] ?? false),
+                    'is_ramadan'  => $isRamadanMode,
                 ]);
             }
         });
 
+        $this->overrideState = null;
+        $this->overrideUntil = null;
         $this->loadWindows();
 
         Notification::make()

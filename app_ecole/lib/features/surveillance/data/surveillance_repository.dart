@@ -167,7 +167,10 @@ class SurveillanceRepository {
           for (final raw in list) {
             if (raw is Map<String, dynamic>) {
               final item = SurveillanceItem.fromJson(raw);
-              if (item.status == 'class_notified') {
+              if (item.status == 'class_notified' ||
+                  item.status == 'requested' ||
+                  item.status == 'pending_agent_confirmation' ||
+                  item.status == 'on_the_way') {
                 _currentItems.add(item);
               }
             }
@@ -213,8 +216,13 @@ class SurveillanceRepository {
   }
 
   void _handleArrivalSignaledEvent(ArrivalSignaledEvent event) {
+    final effectiveRequestId = (event.requestId != null && event.requestId!.isNotEmpty)
+        ? event.requestId!
+        : event.arrivalId;
+
     final index = _currentItems.indexWhere(
       (i) =>
+          i.requestId == effectiveRequestId ||
           i.requestId == event.arrivalId ||
           (event.studentId != null &&
               event.studentId!.isNotEmpty &&
@@ -225,6 +233,7 @@ class SurveillanceRepository {
       // Déjà présent : mise à jour
       final existing = _currentItems[index];
       _currentItems[index] = existing.copyWith(
+        requestId: effectiveRequestId,
         liveDistanceMeters: event.liveDistanceMeters,
         proximityState: event.proximityState,
         parentName: event.parentName ?? existing.parentName,
@@ -234,7 +243,7 @@ class SurveillanceRepository {
       final rawName = event.studentName ?? '';
       final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
       final newItem = SurveillanceItem(
-        requestId: event.arrivalId,
+        requestId: effectiveRequestId,
         childId: event.studentId ?? '',
         childInitial: initial,
         childName: rawName.isNotEmpty ? rawName : initial,
@@ -258,18 +267,78 @@ class SurveillanceRepository {
 
   void _handleParentApproachingEvent(ParentApproachingEvent event) {
     bool updated = false;
-    for (int i = 0; i < _currentItems.length; i++) {
-      final item = _currentItems[i];
-      final isChildApproaching = event.children.any(
-        (c) => c.toString() == item.childId || (c is Map && c['id'] == item.childId),
-      );
-      if (isChildApproaching || item.parentName == event.parentName) {
-        _currentItems[i] = item.copyWith(
+
+    for (final child in event.children) {
+      String childId = '';
+      String? childRequestId;
+      String childName = '';
+      String className = '';
+
+      if (child is Map<String, dynamic>) {
+        childId = child['id']?.toString() ?? '';
+        childRequestId = child['request_id']?.toString();
+        childName = '${child['first_name'] ?? ''} ${child['last_name'] ?? ''}'.trim();
+        className = child['class_name']?.toString() ?? '';
+      } else if (child is Map) {
+        childId = child['id']?.toString() ?? '';
+        childRequestId = child['request_id']?.toString();
+        childName = '${child['first_name'] ?? ''} ${child['last_name'] ?? ''}'.trim();
+        className = child['class_name']?.toString() ?? '';
+      } else {
+        childId = child.toString();
+      }
+
+      final index = _currentItems.indexWhere((item) {
+        if (childRequestId != null && childRequestId.isNotEmpty && item.requestId == childRequestId) {
+          return true;
+        }
+        if (childId.isNotEmpty && item.childId == childId) {
+          return true;
+        }
+        return false;
+      });
+
+      if (index >= 0) {
+        final existing = _currentItems[index];
+        _currentItems[index] = existing.copyWith(
+          requestId: (childRequestId != null && childRequestId.isNotEmpty)
+              ? childRequestId
+              : existing.requestId,
+          childName: childName.isNotEmpty ? childName : existing.childName,
+          className: className.isNotEmpty ? className : existing.className,
           liveDistanceMeters: event.distanceMeters,
           proximityState: event.proximityState,
-          parentName: event.parentName ?? item.parentName,
+          parentName: event.parentName ?? existing.parentName,
         );
         updated = true;
+      } else if (childRequestId != null && childRequestId.isNotEmpty) {
+        final initial = childName.isNotEmpty ? '${childName[0]}.' : '';
+        final newItem = SurveillanceItem(
+          requestId: childRequestId,
+          childId: childId,
+          childInitial: initial,
+          childName: childName.isNotEmpty ? childName : initial,
+          className: className,
+          calledAt: clock.now(),
+          status: 'class_notified',
+          parentName: event.parentName,
+          liveDistanceMeters: event.distanceMeters,
+          proximityState: event.proximityState,
+        );
+        _currentItems.add(newItem);
+        updated = true;
+      }
+    }
+
+    if (!updated && event.children.isEmpty && event.parentName != null) {
+      for (int i = 0; i < _currentItems.length; i++) {
+        if (_currentItems[i].parentName == event.parentName) {
+          _currentItems[i] = _currentItems[i].copyWith(
+            liveDistanceMeters: event.distanceMeters,
+            proximityState: event.proximityState,
+          );
+          updated = true;
+        }
       }
     }
 
@@ -300,13 +369,30 @@ class SurveillanceRepository {
       return;
     }
 
-    removeDeparted(event.requestId);
+    updateItemStatus(event.requestId, 'on_the_way');
   }
 
-  /// Marquer le départ d'un élève (transition class_notified -> on_the_way).
+  /// Mettre à jour le statut d'un item existant (ex. transition vers on_the_way).
+  void updateItemStatus(String requestId, String newStatus) {
+    final index = _currentItems.indexWhere(
+      (i) => i.requestId == requestId || i.id == requestId,
+    );
+    if (index >= 0) {
+      _currentItems[index] = _currentItems[index].copyWith(status: newStatus);
+      _stateController.add(SurveillanceLoaded(
+        items: List.from(_currentItems),
+        isResyncing: false,
+      ));
+    }
+  }
+
+  /// Marquer le départ d'un élève (transition class_notified / requested -> on_the_way).
   Future<void> markDepart(String requestId, {String? token}) async {
     final dio = _dio;
-    if (dio == null) return;
+    if (dio == null) {
+      updateItemStatus(requestId, 'on_the_way');
+      return;
+    }
 
     final effectiveToken = token ?? _authToken;
     final idempotencyKey = const Uuid().v4();
@@ -317,10 +403,52 @@ class SurveillanceRepository {
       if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
     };
 
-    await dio.post(
+    final response = await dio.post(
       '$_baseUrl/api/v1/schools/$_schoolId/pickup-requests/$requestId/depart',
       options: Options(headers: headers),
     );
+
+    if (response.statusCode == 200) {
+      updateItemStatus(requestId, 'on_the_way');
+    }
+  }
+
+  /// Valider la remise finale d'un élève (transition on_the_way -> handed_over).
+  Future<void> markHandover(
+    String requestId, {
+    String? parentUserId,
+    String? token,
+  }) async {
+    final dio = _dio;
+    if (dio == null) {
+      removeDeparted(requestId);
+      return;
+    }
+
+    final effectiveToken = token ?? _authToken;
+    final idempotencyKey = const Uuid().v4();
+    final headers = <String, dynamic>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
+      if (effectiveToken != null) 'Authorization': 'Bearer $effectiveToken',
+    };
+
+    final body = <String, dynamic>{
+      'collector_type': 'parent',
+      if (parentUserId != null && parentUserId.isNotEmpty)
+        'parent_user_id': parentUserId,
+    };
+
+    final response = await dio.post(
+      '$_baseUrl/api/v1/schools/$_schoolId/pickup-requests/$requestId/handover',
+      data: body,
+      options: Options(headers: headers),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      removeDeparted(requestId);
+    }
   }
 
   /// Ajouter directement un item (pour tests).

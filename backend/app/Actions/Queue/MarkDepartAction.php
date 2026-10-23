@@ -37,6 +37,28 @@ class MarkDepartAction
             throw new ModelNotFoundException('Demande introuvable pour cette école.');
         }
 
+        // 0b. Vérification des classes assignées au surveillant
+        if ($marker->role === 'surveillant') {
+            $schoolHasClasses = \App\Models\SchoolClass::withoutGlobalScopes()
+                ->where('school_id', $pickupRequest->school_id)
+                ->exists();
+
+            if ($schoolHasClasses) {
+                $pickupRequest->loadMissing('child');
+                $childClassName = trim((string) ($pickupRequest->child?->class_name ?? ''));
+                $assignedClasses = $marker->schoolClasses()
+                    ->withoutGlobalScopes()
+                    ->where('school_classes.school_id', $pickupRequest->school_id)
+                    ->pluck('school_classes.name')
+                    ->map(fn ($n) => trim((string) $n))
+                    ->all();
+
+                if (! in_array($childClassName, $assignedClasses, true)) {
+                    abort(403, "Le surveillant n'est pas autorisé pour la classe '{$childClassName}'.");
+                }
+            }
+        }
+
         $keyHash = hash('sha256', $idempotencyKey);
         $requestHash = hash('sha256', json_encode($requestPayload) ?: '{}');
         $endpoint = 'POST /depart';
@@ -55,8 +77,8 @@ class MarkDepartAction
             throw new IdempotencyConflictException;
         }
 
-        // 2. Contrôle préalable : idempotence d'état si déjà on_the_way (CA7)
-        if ($pickupRequest->status === PickupRequest::STATUS_ON_THE_WAY) {
+        // 2. Contrôle préalable : idempotence d'état si déjà on_the_way ou handed_over
+        if ($pickupRequest->status === PickupRequest::STATUS_ON_THE_WAY || $pickupRequest->status === PickupRequest::STATUS_HANDED_OVER) {
             $responseBody = [
                 'id' => (string) $pickupRequest->id,
                 'status' => $pickupRequest->status,
@@ -79,20 +101,27 @@ class MarkDepartAction
             return $responseBody;
         }
 
-        // 3. Statut invalide (doit être class_notified ; requested -> 422 CA19, terminaux -> 422 CA9)
-        if ($pickupRequest->status !== PickupRequest::STATUS_CLASS_NOTIFIED) {
+        // 3. Statuts autorisés pour transition vers on_the_way :
+        // requested, pending_agent_confirmation, class_notified
+        $validStatuses = [
+            PickupRequest::STATUS_REQUESTED,
+            PickupRequest::STATUS_PENDING_AGENT_CONFIRMATION,
+            PickupRequest::STATUS_CLASS_NOTIFIED,
+        ];
+
+        if (! in_array($pickupRequest->status, $validStatuses, true)) {
             throw new HandoverImpossibleException(
                 "Impossible de marquer le départ pour une demande au statut '{$pickupRequest->status}'."
             );
         }
 
         // 4. Verrouillage pessimiste sous transaction
-        return DB::transaction(function () use ($pickupRequest, $marker, $keyHash, $requestHash, $endpoint) {
+        return DB::transaction(function () use ($pickupRequest, $marker, $keyHash, $requestHash, $endpoint, $validStatuses) {
             $locked = PickupRequest::where('id', $pickupRequest->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($locked->status === PickupRequest::STATUS_ON_THE_WAY) {
+            if ($locked->status === PickupRequest::STATUS_ON_THE_WAY || $locked->status === PickupRequest::STATUS_HANDED_OVER) {
                 $responseBody = [
                     'id' => (string) $locked->id,
                     'status' => $locked->status,
@@ -115,7 +144,7 @@ class MarkDepartAction
                 return $responseBody;
             }
 
-            if ($locked->status !== PickupRequest::STATUS_CLASS_NOTIFIED) {
+            if (! in_array($locked->status, $validStatuses, true)) {
                 throw new HandoverImpossibleException(
                     "Impossible de marquer le départ pour une demande au statut '{$locked->status}'."
                 );

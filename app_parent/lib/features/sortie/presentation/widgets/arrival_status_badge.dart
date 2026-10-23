@@ -96,9 +96,11 @@ class ArrivalStatusBadge extends StatelessWidget {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(
                 width: 24,
@@ -160,6 +162,7 @@ class ArrivalStatusBadge extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
@@ -186,18 +189,22 @@ class ArrivalStatusBadge extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // Bouton de rafraîchissement avec zone tactile ≥ 48dp
-          OutlinedButton.icon(
-            onPressed: onRefreshLocation,
-            icon: const Icon(Icons.refresh_rounded, size: 20),
-            label: const Text('Actualiser ma position'), // hardcoded-ok
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF92400E),
-              side: const BorderSide(color: SortieColors.warning, width: 1.5),
-              minimumSize: const Size.fromHeight(48), // Cible tactile ≥ 48dp
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: onRefreshLocation,
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: const Text('Actualiser ma position'), // hardcoded-ok
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF92400E),
+                side: const BorderSide(color: SortieColors.warning, width: 1.5),
+                minimumSize: const Size(64, 48), // Cible tactile ≥ 48dp
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              textStyle: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -229,6 +236,7 @@ class ArrivalStatusBadge extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
@@ -255,18 +263,22 @@ class ArrivalStatusBadge extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // Bouton de réessai avec zone tactile ≥ 48dp
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.replay_rounded, size: 20),
-            label: const Text('Réessayer'), // hardcoded-ok
-            style: ElevatedButton.styleFrom(
-              backgroundColor: SortieColors.error,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48), // Cible tactile ≥ 48dp
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.replay_rounded, size: 20),
+              label: const Text('Réessayer'), // hardcoded-ok
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SortieColors.error,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(64, 48), // Cible tactile ≥ 48dp
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              textStyle: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -297,6 +309,7 @@ class ArrivalStatusBadge extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(

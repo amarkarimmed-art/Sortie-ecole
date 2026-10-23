@@ -719,3 +719,173 @@ test('10. Autorisation des canaux WebSocket (/broadcasting/auth avec token Sanct
     ]);
     $resSurveillantWrongSchool->assertStatus(403);
 });
+
+/*
+|--------------------------------------------------------------------------
+| SÉRIE 18 : Plage horaire 22:00 -> 23:33 le Jeudi à 23:06 et ManageSchoolLogo
+|--------------------------------------------------------------------------
+*/
+test('18. Plage 22:00 -> 23:33 un Jeudi à 23:06 retourne is_open true et fermeture 23:33', function () {
+    $school = School::factory()->create([
+        'perimeter_radius' => 50,
+        'opening_margin_minutes' => 10,
+        'is_ramadan_mode' => false,
+        'manual_override_state' => null,
+    ]);
+
+    $parent = User::factory()->create([
+        'school_id' => $school->id,
+        'role' => 'parent',
+    ]);
+
+    // Plage horaire 22:00 -> 23:33 pour le Jeudi (day_of_week = 4)
+    PickupWindow::factory()->create([
+        'school_id' => $school->id,
+        'day_of_week' => 4,
+        'start_time' => '22:00:00',
+        'end_time' => '23:33:00',
+        'is_ramadan' => false,
+    ]);
+
+    // Date de test : Jeudi 22 Octobre 2026 à 23:06:00 Africa/Casablanca
+    $testTime = Carbon::create(2026, 10, 22, 23, 6, 0, 'Africa/Casablanca');
+    Carbon::setTestNow($testTime);
+
+    Sanctum::actingAs($parent);
+
+    $response = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
+
+    $response->assertStatus(200)
+        ->assertJson([
+            'is_open' => true,
+            'closes_at' => '23:33',
+            'next_opening_at' => null,
+            'message_fr' => "Sortie en cours jusqu'à 23:33",
+        ]);
+});
+
+test('19. ManageSchoolLogo copyDayToAll et save créent les 7 jours et réinitialisent le débrayage manuel', function () {
+    $school = School::factory()->create([
+        'is_ramadan_mode' => false,
+        'manual_override_state' => 'closed',
+        'manual_override_until' => Carbon::now('Africa/Casablanca')->addHour(),
+    ]);
+
+    $admin = User::factory()->create([
+        'school_id' => $school->id,
+        'role' => 'admin_ecole',
+    ]);
+
+    $this->actingAs($admin);
+
+    // Initialiser le composant Livewire ManageSchoolLogo
+    \Livewire\Livewire::test(\App\Filament\Pages\ManageSchoolLogo::class)
+        ->set('windows', [
+            [
+                'id' => null,
+                'day_of_week' => 1,
+                'start_time' => '22:00',
+                'end_time' => '23:33',
+                'is_ramadan' => false,
+            ],
+        ])
+        ->call('copyDayToAll', 1)
+        ->assertHasNoErrors();
+
+    // Vérifier en base : 7 plages créées (du Lundi au Dimanche) et override réinitialisé
+    // Justifié : vérification de test unitaire restreinte à l'école testée
+    $windowsCount = PickupWindow::withoutGlobalScopes()
+        ->where('school_id', $school->id)
+        ->where('is_ramadan', false)
+        ->count();
+
+    expect($windowsCount)->toBe(7);
+
+    // Justifié : rafraîchissement restreint au modèle créé
+    $school->refresh();
+    expect($school->manual_override_state)->toBeNull();
+    expect($school->manual_override_until)->toBeNull();
+
+    // Tester aussi save() avec un override existant
+    $school->update(['manual_override_state' => 'closed']);
+    expect($school->manual_override_state)->toBe('closed');
+
+    \Livewire\Livewire::test(\App\Filament\Pages\ManageSchoolLogo::class)
+        ->call('save')
+        ->assertHasNoErrors();
+
+    // Justifié : rafraîchissement restreint au modèle créé
+    $school->refresh();
+    expect($school->manual_override_state)->toBeNull();
+});
+
+test('20. Plage se terminant a 23:59 couvre jusqu a 23:59:59 inclus', function () {
+    $school = School::factory()->create([
+        'opening_margin_minutes' => 10,
+        'is_ramadan_mode' => false,
+    ]);
+
+    $parent = User::factory()->create([
+        'school_id' => $school->id,
+        'role' => 'parent',
+    ]);
+
+    PickupWindow::factory()->create([
+        'school_id' => $school->id,
+        'day_of_week' => 4, // Jeudi
+        'start_time' => '23:00:00',
+        'end_time' => '23:59:00',
+        'is_ramadan' => false,
+    ]);
+
+    // Test à 23:59:45 un Jeudi
+    $testTime = Carbon::create(2026, 10, 22, 23, 59, 45, 'Africa/Casablanca');
+    Carbon::setTestNow($testTime);
+
+    Sanctum::actingAs($parent);
+
+    $response = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
+    $response->assertStatus(200)
+        ->assertJson([
+            'is_open' => true,
+            'closes_at' => '23:59',
+        ]);
+});
+
+test('21. Plage traversant minuit 23:00 a 01:00 active le soir et apres minuit', function () {
+    $school = School::factory()->create([
+        'opening_margin_minutes' => 10,
+        'is_ramadan_mode' => false,
+    ]);
+
+    $parent = User::factory()->create([
+        'school_id' => $school->id,
+        'role' => 'parent',
+    ]);
+
+    // Plage Jeudi (4) de 23:00 à 01:00
+    PickupWindow::factory()->create([
+        'school_id' => $school->id,
+        'day_of_week' => 4,
+        'start_time' => '23:00:00',
+        'end_time' => '01:00:00',
+        'is_ramadan' => false,
+    ]);
+
+    Sanctum::actingAs($parent);
+
+    // 1. Actif Jeudi soir à 23:30
+    Carbon::setTestNow(Carbon::create(2026, 10, 22, 23, 30, 0, 'Africa/Casablanca'));
+    $resEvening = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
+    $resEvening->assertStatus(200)->assertJson(['is_open' => true, 'closes_at' => '01:00']);
+
+    // 2. Actif Vendredi matin à 00:30 (continuation d'hier)
+    Carbon::setTestNow(Carbon::create(2026, 10, 23, 0, 30, 0, 'Africa/Casablanca'));
+    $resNight = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
+    $resNight->assertStatus(200)->assertJson(['is_open' => true, 'closes_at' => '01:00']);
+
+    // 3. Fermé Vendredi matin à 01:05
+    Carbon::setTestNow(Carbon::create(2026, 10, 23, 1, 5, 0, 'Africa/Casablanca'));
+    $resClosed = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
+    $resClosed->assertStatus(200)->assertJson(['is_open' => false]);
+});
