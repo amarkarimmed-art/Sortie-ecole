@@ -26,10 +26,11 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(\App\Filament\Pages\Auth\AdminLogin::class)
             ->brandName(function (): string {
                 $user = auth()->user();
                 if ($user && $user->role !== 'super_admin' && $user->school_id) {
+                    // Justifié : Récupération du nom de l'école pour le bandeau sans global scope
                     $school = \App\Models\School::withoutGlobalScopes()->find($user->school_id);
                     if ($school) {
                         return $school->name;
@@ -40,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(function (): ?string {
                 $user = auth()->user();
                 if ($user && $user->role !== 'super_admin' && $user->school_id) {
+                    // Justifié : Récupération du logo de l'école pour le bandeau sans global scope
                     $school = \App\Models\School::withoutGlobalScopes()->find($user->school_id);
                     if ($school && !empty($school->logo)) {
                         return \Illuminate\Support\Facades\Storage::disk('public')->url($school->logo);
@@ -66,7 +68,6 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,

@@ -32,6 +32,7 @@ class GenerateAccountLoginsCommand extends Command
     {
         $outputPath = $this->option('output') ?: storage_path('app/generated_logins.csv');
 
+        // Justifié : Commande CLI de génération d'identifiants sur l'ensemble des écoles
         $users = User::withoutGlobalScopes()
             ->whereIn('role', ['parent', 'surveillant', 'concierge'])
             ->where(function ($q) {
@@ -57,6 +58,7 @@ class GenerateAccountLoginsCommand extends Command
         fputcsv($file, ['nom', 'ecole', 'login', 'mot_de_passe']);
 
         foreach ($users as $user) {
+            // Justifié : Récupération de l'école de l'utilisateur sans global scope
             $school = School::withoutGlobalScopes()->find($user->school_id);
             $schoolSlug = Str::slug($school?->name ?: 'ecole', '');
             $userSlug = Str::slug($user->name ?: 'user', '.');
@@ -66,6 +68,7 @@ class GenerateAccountLoginsCommand extends Command
             $candidateLogin = $baseLogin;
             $counter = 1;
 
+            // Justifié : Vérification de l'unicité du login candidat
             while (User::withoutGlobalScopes()->where('email', $candidateLogin)->exists()) {
                 $candidateLogin = "{$roleSlug}.{$userSlug}{$counter}@{$schoolSlug}";
                 $counter++;

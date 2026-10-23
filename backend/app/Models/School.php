@@ -35,6 +35,7 @@ class School extends Model
 
     public function director(): HasOne
     {
+        // Justifié : Relation vers le directeur sans restriction de scope
         return $this->hasOne(User::class, 'school_id')->withoutGlobalScopes()->where('role', 'director');
     }
 

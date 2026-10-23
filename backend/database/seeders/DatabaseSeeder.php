@@ -62,6 +62,7 @@ class DatabaseSeeder extends Seeder
 
         // 5. Classes initiales pour le back-office Filament
         foreach (['CP A', 'CP B', 'CE1 A', 'CE2 A'] as $className) {
+            // Justifié : Seeder initial pour créer les classes sans global scope
             SchoolClass::withoutGlobalScopes()->firstOrCreate([
                 'school_id' => $school->id,
                 'name' => $className,
@@ -111,6 +112,7 @@ class DatabaseSeeder extends Seeder
         $surveillants = User::withoutGlobalScopes()->where('role', 'surveillant')->get();
         foreach ($surveillants as $srv) {
             if ($srv->schoolClasses()->count() === 0 && $srv->school_id) {
+                // Justifié : Recherche des classes disponibles sans global scope pour association
                 $availableClasses = SchoolClass::withoutGlobalScopes()
                     ->where('school_id', $srv->school_id)
                     ->whereDoesntHave('surveillants')

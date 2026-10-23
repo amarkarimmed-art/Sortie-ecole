@@ -24,7 +24,7 @@ class SuperAdminPanelProvider extends PanelProvider
         return $panel
             ->id('super-admin')
             ->path('super-admin')
-            ->login()
+            ->login(\App\Filament\SuperAdmin\Pages\Auth\SuperAdminLogin::class)
             ->brandName("Sortie d'école — Super Admin")
             ->favicon(asset('favicon.png'))
             ->colors([
@@ -50,7 +50,6 @@ class SuperAdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                AuthenticateSession::class,
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,

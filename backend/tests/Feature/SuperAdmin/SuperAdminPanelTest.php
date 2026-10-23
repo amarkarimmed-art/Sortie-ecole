@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Filament\Pages\Auth\AdminLogin;
+use App\Filament\SuperAdmin\Resources\SchoolResource\Pages\CreateSchool;
 use App\Filament\SuperAdmin\Resources\UserResource;
 use App\Filament\SuperAdmin\Resources\UserResource\Pages\CreateUser;
 use App\Models\School;
@@ -12,6 +14,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 
 /**
  * 1. Création d'une école + directeur avec seulement nom de l'école, login et mot de passe
@@ -32,6 +35,7 @@ it('crée une école et son directeur de façon atomique et effectue un rollback
             'is_suspended' => false,
         ]);
 
+        // Justifié : Création du compte directeur initial dans le test
         User::withoutGlobalScopes()->create([
             'school_id' => $school->id,
             'name' => $school->name,
@@ -45,6 +49,7 @@ it('crée une école et son directeur de façon atomique et effectue un rollback
     expect($school)->not->toBeNull();
     expect($school->is_suspended)->toBeFalse();
 
+    // Justifié : Recherche sans global scope pour vérifier le directeur créé dans le test
     $director = User::withoutGlobalScopes()->where('email', $login)->first();
     expect($director)->not->toBeNull();
     expect($director->role)->toBe('director');
@@ -87,6 +92,7 @@ it('permet au directeur créé de se connecter avec son mot de passe et d\'accé
     ]);
 
     $password = 'directeurSecret123';
+    // Justifié : Création du compte directeur initial dans le test
     $director = User::withoutGlobalScopes()->create([
         'school_id' => $school->id,
         'name' => $school->name,
@@ -221,4 +227,54 @@ it('affiche les pages principales du Super-Admin sans erreur (HTTP 200)', functi
     $this->actingAs($superAdmin)
         ->get('/super-admin/users/create')
         ->assertSuccessful();
+});
+
+/**
+ * 8. Bout-en-bout : Création d'école via Livewire CreateSchool + Connexion du directeur via AdminLogin.
+ */
+it('crée une école et son directeur via Livewire puis permet au directeur de se connecter via AdminLogin', function () {
+    Filament::setCurrentPanel(Filament::getPanel('super-admin'));
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    Livewire::test(CreateSchool::class)
+        ->fillForm([
+            'name' => 'Groupe Scolaire Test',
+            'director_email' => 'test.director@ecole.ma',
+            'director_password' => '123456',
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    // Justifié : Vérification sans global scope de l'existence du compte directeur créé
+    $director = User::withoutGlobalScopes()
+        ->where('email', 'test.director@ecole.ma')
+        ->first();
+
+    expect($director)->not->toBeNull();
+    expect($director->role)->toBe('director');
+    expect(Hash::check('123456', $director->password))->toBeTrue();
+
+    // Déconnexion du Super-Admin et passage au panneau Admin
+    auth()->logout();
+    Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+    // S'assurer qu'un autre compte d'une autre école existe déjà en base
+    $otherSchool = School::factory()->create(['name' => 'Autre École Existante']);
+    User::factory()->director()->create([
+        'school_id' => $otherSchool->id,
+        'email' => 'autre.directeur@ecole.ma',
+    ]);
+
+    Livewire::test(AdminLogin::class)
+        ->fillForm([
+            'email' => 'test.director@ecole.ma',
+            'password' => '123456',
+        ])
+        ->call('authenticate')
+        ->assertHasNoFormErrors()
+        ->assertRedirect('/admin');
+
+    expect(auth()->check())->toBeTrue();
+    expect(auth()->id())->toBe($director->id);
 });

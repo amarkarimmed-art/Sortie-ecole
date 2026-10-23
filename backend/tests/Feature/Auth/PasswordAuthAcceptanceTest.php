@@ -342,6 +342,7 @@ test('Test 9 : Commande accounts:generate-logins génère des logins uniques et 
         'email'     => null,
     ]);
 
+    // Justifié : Création d'un second parent sans email dans le test
     $parent2 = User::withoutGlobalScopes()->create([
         'school_id' => $school->id,
         'name'      => 'Karim Ben',

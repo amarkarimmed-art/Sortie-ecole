@@ -30,8 +30,8 @@ class UserResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes()
+        // Justifié : Query sans global scope pour lister tous les directeurs de toutes les écoles
+        return parent::getEloquentQuery()->withoutGlobalScopes()
             ->where('role', 'director');
     }
 

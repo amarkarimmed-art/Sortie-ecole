@@ -36,6 +36,7 @@ class LoginWithPasswordAction extends BaseAction
             ];
         }
 
+        // Justifié : Recherche sans global scope pour identifier l'utilisateur lors de la connexion
         $user = User::withoutGlobalScopes()->where('email', $login)->first();
 
         if (! $user || empty($user->password) || ! Hash::check($password, $user->password)) {
@@ -109,6 +110,19 @@ class LoginWithPasswordAction extends BaseAction
      */
     public static function formatUserPayload(User $user, School $school): array
     {
+        $children = [];
+        if ($user->role === 'parent') {
+            // Justifié : Chargement des enfants du parent avec filtrage explicite par school_id
+            $children = $user->children()->withoutGlobalScopes()->where('children.school_id', $school->id)->get()->map(fn ($child) => [
+                'id'         => (string) $child->id,
+                'school_id'  => (string) $child->school_id,
+                'first_name' => (string) $child->first_name,
+                'last_name'  => (string) $child->last_name,
+                'class_name' => (string) $child->class_name,
+                'photo_url'  => $child->photo_path,
+            ])->values()->all();
+        }
+
         return [
             'id'          => (string) $user->id,
             'name'        => (string) $user->name,
@@ -119,16 +133,7 @@ class LoginWithPasswordAction extends BaseAction
             'school_id'   => (string) $user->school_id,
             'school_name' => (string) $school->name,
             'school_logo' => $school->logo ? Storage::disk('public')->url($school->logo) : null,
-            'children'    => $user->role === 'parent'
-                ? $user->children()->withoutGlobalScopes()->where('children.school_id', $school->id)->get()->map(fn ($child) => [
-                    'id'         => (string) $child->id,
-                    'school_id'  => (string) $child->school_id,
-                    'first_name' => (string) $child->first_name,
-                    'last_name'  => (string) $child->last_name,
-                    'class_name' => (string) $child->class_name,
-                    'photo_url'  => $child->photo_path,
-                ])->values()->all()
-                : [],
+            'children'    => $children,
         ];
     }
 }

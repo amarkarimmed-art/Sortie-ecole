@@ -19,6 +19,7 @@ class CreateUser extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        // Justifié : Recherche sans global scope de l'école dans le panneau Super-Admin
         $school = School::withoutGlobalScopes()->findOrFail($data['school_id']);
 
         $data['role'] = 'director';

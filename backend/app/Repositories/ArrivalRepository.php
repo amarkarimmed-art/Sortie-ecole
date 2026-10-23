@@ -33,8 +33,7 @@ class ArrivalRepository extends BaseRepository implements ArrivalRepositoryInter
     public function findByIdempotencyKeyAndSchool(string $idempotencyKey, string $schoolId): ?Model
     {
         // Justifié : school_id explicite passé en clause WHERE, garantissant l'absence de fuite inter-écoles.
-        return $this->model->newQuery()
-            ->withoutGlobalScopes()
+        return $this->model->newQuery()->withoutGlobalScopes()
             ->where('school_id', $schoolId)
             ->where('idempotency_key', $idempotencyKey)
             ->first();

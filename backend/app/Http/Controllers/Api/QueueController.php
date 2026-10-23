@@ -107,6 +107,7 @@ class QueueController extends BaseController
             ], 422);
         }
 
+        // Justifié : Recherche de la demande de prise en charge par ID
         $pickupRequest = PickupRequest::withoutGlobalScopes()
             ->where('school_id', $school->id)
             ->where('id', $requestId)
@@ -114,6 +115,7 @@ class QueueController extends BaseController
 
         if (! $pickupRequest) {
             $today = Carbon::now('Africa/Casablanca')->toDateString();
+            // Justifié : Recherche de secours par arrival_id, child_id ou requested_by
             $pickupRequest = PickupRequest::withoutGlobalScopes()
                 ->where('school_id', $school->id)
                 ->whereDate('created_at', $today)
@@ -292,7 +294,7 @@ class QueueController extends BaseController
             ], 422);
         }
 
-        // 1. Cherche d'abord par PickupRequest::withoutGlobalScopes()->where('school_id', $school->id)->where('id', $requestId)->first().
+        // 1. Cherche d'abord par requête directe filtrée par école et id
         // Justifié : recherche de la demande par son id primaire sans restriction de scope global
         $pickupRequest = PickupRequest::withoutGlobalScopes()
             ->where('school_id', $school->id)

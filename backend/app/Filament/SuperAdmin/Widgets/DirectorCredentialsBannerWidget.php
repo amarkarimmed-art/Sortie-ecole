@@ -8,7 +8,9 @@ use Filament\Widgets\Widget;
 
 class DirectorCredentialsBannerWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.director-credentials-banner';
+    protected static bool $isLazy = false;
+
+    protected static string $view = 'filament.super-admin.widgets.director-credentials-banner';
 
     protected int|string|array $columnSpan = 'full';
 

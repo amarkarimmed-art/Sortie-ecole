@@ -20,6 +20,7 @@ class EditUser extends EditRecord
         $data['role'] = 'director';
 
         if (! empty($data['school_id'])) {
+            // Justifié : Recherche sans global scope de l'école dans le panneau Super-Admin
             $data['name'] = School::withoutGlobalScopes()->find($data['school_id'])?->name ?? 'Directeur';
         }
 

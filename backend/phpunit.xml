@@ -25,7 +25,7 @@
     </source>
 
     <php>
-        <env name="APP_ENV" value="testing"/>
+        <env name="APP_ENV" value="testing" force="true"/>
         <env name="APP_TIMEZONE" value="Africa/Casablanca"/>
 
         <!-- PostgreSQL obligatoire — JAMAIS SQLite -->

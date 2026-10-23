@@ -11,12 +11,15 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SuperAdminStatsOverview extends BaseWidget
 {
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = 1;
 
     protected function getStats(): array
     {
         $activeSchools = School::where('is_suspended', false)->count();
         $suspendedSchools = School::where('is_suspended', true)->count();
+        // Justifié : Comptage de l'ensemble des directeurs pour le tableau de bord Super-Admin
         $directorsCount = User::withoutGlobalScopes()->where('role', 'director')->count();
 
         return [

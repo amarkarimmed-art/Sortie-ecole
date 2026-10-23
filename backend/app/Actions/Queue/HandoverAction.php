@@ -39,6 +39,7 @@ class HandoverAction
 
         // 0b. Vérification des classes assignées pour le rôle surveillant
         if ($agent->role === 'surveillant') {
+            // Justifié : Vérification de l'existence des classes pour l'école
             $schoolHasClasses = \App\Models\SchoolClass::withoutGlobalScopes()
                 ->where('school_id', $request->school_id)
                 ->exists();
@@ -46,8 +47,8 @@ class HandoverAction
             if ($schoolHasClasses) {
                 $request->loadMissing('child');
                 $childClassName = trim((string) ($request->child?->class_name ?? ''));
-                $assignedClasses = $agent->schoolClasses()
-                    ->withoutGlobalScopes()
+                // Justifié : Classes assignées au surveillant filtrées par école
+                $assignedClasses = $agent->schoolClasses()->withoutGlobalScopes()
                     ->where('school_classes.school_id', $request->school_id)
                     ->pluck('school_classes.name')
                     ->map(fn ($n) => trim((string) $n))

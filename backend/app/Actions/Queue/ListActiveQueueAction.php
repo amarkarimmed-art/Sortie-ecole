@@ -37,8 +37,8 @@ class ListActiveQueueAction
                     ->get();
             }
 
-            $assignedClassNames = $user->schoolClasses()
-                ->withoutGlobalScopes()
+            // Justifié : Classes assignées au surveillant avec filtrage explicite de l'école
+            $assignedClassNames = $user->schoolClasses()->withoutGlobalScopes()
                 ->where('school_classes.school_id', $school->id)
                 ->pluck('school_classes.name')
                 ->all();

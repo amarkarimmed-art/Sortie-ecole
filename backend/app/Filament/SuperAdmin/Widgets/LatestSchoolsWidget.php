@@ -11,6 +11,8 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class LatestSchoolsWidget extends BaseWidget
 {
+    protected static bool $isLazy = false;
+
     protected static ?int $sort = 2;
 
     protected static ?string $heading = '5 dernières écoles créées';

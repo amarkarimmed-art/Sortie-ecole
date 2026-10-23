@@ -40,6 +40,16 @@ trait BelongsToSchool
                     return;
                 }
 
+                // Exclusion pour l'authentification Livewire et le panneau Super-Admin
+                $referer = request()?->header('Referer', '') ?? '';
+                if (
+                    request()?->is('admin/login*', 'super-admin*') ||
+                    str_contains($referer, '/login') ||
+                    str_contains($referer, '/super-admin')
+                ) {
+                    return;
+                }
+
                 SchoolScopeState::$isResolving = true;
 
                 try {

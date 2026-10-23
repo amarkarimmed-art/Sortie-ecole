@@ -58,6 +58,7 @@ class User extends Authenticatable implements FilamentUser
                 return false;
             }
 
+            // Justifié : Vérification de suspension de l'école sans global scope
             $school = School::withoutGlobalScopes()->find($this->school_id);
             if (! $school || $school->is_suspended) {
                 return false;

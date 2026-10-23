@@ -11,6 +11,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class CreateSchool extends CreateRecord
 {
@@ -22,24 +23,31 @@ class CreateSchool extends CreateRecord
 
     protected function handleRecordCreation(array $data): Model
     {
-        return DB::transaction(function () use ($data) {
+        $rawState = $this->form->getRawState();
+        $schoolName = trim((string) ($data['name'] ?? $rawState['name'] ?? ''));
+        $directorEmail = strtolower(trim((string) ($data['director_email'] ?? $rawState['director_email'] ?? '')));
+        $directorPassword = (string) ($data['director_password'] ?? $rawState['director_password'] ?? '');
+
+        return DB::transaction(function () use ($schoolName, $directorEmail, $directorPassword) {
             $school = School::create([
-                'name' => $data['name'],
+                'name' => $schoolName,
                 'is_suspended' => false,
             ]);
 
-            User::withoutGlobalScopes()->create([
+            // Justifié : Création du compte directeur initial rattaché à la nouvelle école créée
+            $director = User::withoutGlobalScopes()->create([
                 'school_id' => $school->id,
                 'name'      => $school->name,
-                'email'     => $data['director_email'],
-                'password'  => $data['director_password'],
+                'email'     => $directorEmail,
+                'password'  => Hash::make($directorPassword),
                 'role'      => 'director',
+                'phone'     => null,
             ]);
 
             session()->put('flash_director_credentials', [
                 'school_name' => $school->name,
-                'login'       => $data['director_email'],
-                'password'    => $data['director_password'],
+                'login'       => $director->email,
+                'password'    => $directorPassword,
             ]);
 
             return $school;
@@ -53,9 +61,14 @@ class CreateSchool extends CreateRecord
 
     protected function getCreatedNotification(): ?Notification
     {
+        $creds = session()->get('flash_director_credentials', []);
+        $login = $creds['login'] ?? '';
+        $password = $creds['password'] ?? '';
+
         return Notification::make()
             ->success()
             ->title('École et compte directeur créés avec succès')
-            ->body('Les accès générés pour le directeur sont affichés ci-dessous.');
+            ->body("Login : {$login} | Mot de passe : {$password}")
+            ->persistent();
     }
 }

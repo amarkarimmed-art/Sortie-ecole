@@ -71,6 +71,7 @@ class AuthController extends BaseController
             ], 401);
         }
 
+        // Justifié : Récupération de l'école de l'utilisateur connecté sans global scope
         $school = School::withoutGlobalScopes()->find($user->school_id);
 
         if (! $school || $school->is_suspended) {

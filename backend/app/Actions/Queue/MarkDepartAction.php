@@ -39,6 +39,7 @@ class MarkDepartAction
 
         // 0b. Vérification des classes assignées au surveillant
         if ($marker->role === 'surveillant') {
+            // Justifié : Vérification de l'existence des classes pour l'école
             $schoolHasClasses = \App\Models\SchoolClass::withoutGlobalScopes()
                 ->where('school_id', $pickupRequest->school_id)
                 ->exists();
@@ -46,8 +47,8 @@ class MarkDepartAction
             if ($schoolHasClasses) {
                 $pickupRequest->loadMissing('child');
                 $childClassName = trim((string) ($pickupRequest->child?->class_name ?? ''));
-                $assignedClasses = $marker->schoolClasses()
-                    ->withoutGlobalScopes()
+                // Justifié : Classes assignées au surveillant filtrées par école
+                $assignedClasses = $marker->schoolClasses()->withoutGlobalScopes()
                     ->where('school_classes.school_id', $pickupRequest->school_id)
                     ->pluck('school_classes.name')
                     ->map(fn ($n) => trim((string) $n))

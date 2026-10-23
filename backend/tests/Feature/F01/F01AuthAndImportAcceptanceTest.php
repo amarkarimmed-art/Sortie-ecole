@@ -85,6 +85,7 @@ test('CA6 : Le directeur peut importer des élèves via CSV avec telephone2 opti
     expect($child1->school_id)->toBe($school->id);
     expect($child1->parents()->count())->toBe(2);
 
+    // Justifié : Vérification du second enfant créé dans le test
     $child2 = Child::withoutGlobalScopes()->where('first_name', 'Youssef')->first();
     expect($child2)->not->toBeNull();
     expect($child2->parents()->count())->toBe(1);
