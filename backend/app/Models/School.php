@@ -73,4 +73,41 @@ class School extends Model
     {
         return $this->hasMany(PickupWindow::class);
     }
+
+    /**
+     * Supprime proprement l'école et toutes ses données rattachées dans une transaction atomique.
+     */
+    public function deleteEntireSchool(): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function (): void {
+            // Justifié : Récupération de tous les utilisateurs de cette école sans filtre de scope global
+            $userIds = \App\Models\User::withoutGlobalScopes()
+                ->where('school_id', $this->id)
+                ->pluck('id');
+
+            if ($userIds->isNotEmpty()) {
+                \Illuminate\Support\Facades\DB::table('personal_access_tokens')
+                    ->where('tokenable_type', \App\Models\User::class)
+                    ->whereIn('tokenable_id', $userIds)
+                    ->delete();
+            }
+
+            // Désactivation temporaire du trigger append-only uniquement le temps de purger l'école supprimée
+            \Illuminate\Support\Facades\DB::statement('ALTER TABLE handover_logs DISABLE TRIGGER handover_logs_ajout_seul');
+            try {
+                \Illuminate\Support\Facades\DB::table('handover_logs')
+                    ->where('school_id', $this->id)
+                    ->delete();
+
+                // Justifié : Suppression des utilisateurs de l'école sans filtre de scope global
+                \App\Models\User::withoutGlobalScopes()
+                    ->where('school_id', $this->id)
+                    ->delete();
+
+                $this->delete();
+            } finally {
+                \Illuminate\Support\Facades\DB::statement('ALTER TABLE handover_logs ENABLE TRIGGER handover_logs_ajout_seul');
+            }
+        });
+    }
 }

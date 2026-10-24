@@ -16,7 +16,12 @@ class EditSchool extends EditRecord
     {
         return [
             Actions\DeleteAction::make()
-                ->label('Supprimer l\'école'),
+                ->label("Supprimer l'école")
+                ->modalHeading(fn (\App\Models\School $record): string => "Supprimer l'école « {$record->name} » ?")
+                ->modalDescription("Tous les comptes, classes, élèves et historiques liés à cette école seront définitivement effacés.")
+                ->using(function (\App\Models\School $record): void {
+                    $record->deleteEntireSchool();
+                }),
         ];
     }
 

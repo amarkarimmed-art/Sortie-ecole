@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 use App\Filament\Pages\Auth\AdminLogin;
 use App\Filament\SuperAdmin\Resources\SchoolResource\Pages\CreateSchool;
+use App\Filament\SuperAdmin\Resources\SchoolResource\Pages\ListSchools;
 use App\Filament\SuperAdmin\Resources\UserResource;
 use App\Filament\SuperAdmin\Resources\UserResource\Pages\CreateUser;
+use App\Models\Child;
+use App\Models\HandoverLog;
+use App\Models\PickupRequest;
 use App\Models\School;
+use App\Models\SchoolClass;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 
 /**
@@ -277,4 +284,176 @@ it('crée une école et son directeur via Livewire puis permet au directeur de s
 
     expect(auth()->check())->toBeTrue();
     expect(auth()->id())->toBe($director->id);
+});
+
+/**
+ * 9. Suppression complète d'une école possédant directeur, classes, élève, demande et handover_logs.
+ *    Vérifie également que le trigger handover_logs_ajout_seul reste actif pour les autres écoles (CA08HandoverLogImmutabilityTest).
+ */
+it('CA08HandoverLogImmutabilityTest : supprime entièrement une école et ses données associées sans bloquer sur le trigger handover_logs et maintient le trigger actif', function () {
+    // 1. Création de deux écoles distinctes
+    $schoolA = School::factory()->create(['name' => 'École Supprimée A']);
+    $schoolB = School::factory()->create(['name' => 'École Préservée B']);
+
+    // Données École A (à supprimer)
+    // Justifié : Création du compte directeur initial de l'école A sans scope global
+    $directorA = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolA->id,
+        'name' => 'Directeur A',
+        'email' => 'director.a@test.ma',
+        'password' => 'secret123',
+        'role' => 'director',
+    ]);
+    // Justifié : Création d'un parent de l'école A sans scope global
+    $parentA = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolA->id,
+        'name' => 'Parent A',
+        'email' => 'parent.a@test.ma',
+        'password' => 'secret123',
+        'role' => 'parent',
+    ]);
+    // Justifié : Création d'un agent de l'école A sans scope global
+    $agentA = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolA->id,
+        'name' => 'Agent A',
+        'email' => 'agent.a@test.ma',
+        'password' => 'secret123',
+        'role' => 'concierge',
+    ]);
+
+    $classA = SchoolClass::create([
+        'school_id' => $schoolA->id,
+        'name' => 'Classe CP A',
+    ]);
+    $childA = Child::create([
+        'school_id' => $schoolA->id,
+        'first_name' => 'Enfant',
+        'last_name' => 'A',
+        'class_name' => $classA->name,
+    ]);
+    $requestA = PickupRequest::factory()->create([
+        'school_id' => $schoolA->id,
+        'child_id' => $childA->id,
+        'requested_by' => $parentA->id,
+        'status' => PickupRequest::STATUS_HANDED_OVER,
+    ]);
+    $logA = HandoverLog::create([
+        'id' => (string) Str::uuid(),
+        'school_id' => $schoolA->id,
+        'pickup_request_id' => $requestA->id,
+        'agent_id' => $agentA->id,
+        'collector_type' => HandoverLog::COLLECTOR_PARENT,
+        'parent_user_id' => $parentA->id,
+        'idempotency_key' => (string) Str::uuid(),
+        'created_at' => now(),
+    ]);
+
+    // Données École B (à préserver)
+    // Justifié : Création du compte directeur initial de l'école B sans scope global
+    $directorB = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolB->id,
+        'name' => 'Directeur B',
+        'email' => 'director.b@test.ma',
+        'password' => 'secret123',
+        'role' => 'director',
+    ]);
+    // Justifié : Création d'un parent de l'école B sans scope global
+    $parentB = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolB->id,
+        'name' => 'Parent B',
+        'email' => 'parent.b@test.ma',
+        'password' => 'secret123',
+        'role' => 'parent',
+    ]);
+    // Justifié : Création d'un agent de l'école B sans scope global
+    $agentB = User::withoutGlobalScopes()->create([
+        'school_id' => $schoolB->id,
+        'name' => 'Agent B',
+        'email' => 'agent.b@test.ma',
+        'password' => 'secret123',
+        'role' => 'concierge',
+    ]);
+    $classB = SchoolClass::create([
+        'school_id' => $schoolB->id,
+        'name' => 'Classe CE1 B',
+    ]);
+    $childB = Child::create([
+        'school_id' => $schoolB->id,
+        'first_name' => 'Enfant',
+        'last_name' => 'B',
+        'class_name' => $classB->name,
+    ]);
+    $requestB = PickupRequest::factory()->create([
+        'school_id' => $schoolB->id,
+        'child_id' => $childB->id,
+        'requested_by' => $parentB->id,
+        'status' => PickupRequest::STATUS_HANDED_OVER,
+    ]);
+    $logB = HandoverLog::create([
+        'id' => (string) Str::uuid(),
+        'school_id' => $schoolB->id,
+        'pickup_request_id' => $requestB->id,
+        'agent_id' => $agentB->id,
+        'collector_type' => HandoverLog::COLLECTOR_PARENT,
+        'parent_user_id' => $parentB->id,
+        'idempotency_key' => (string) Str::uuid(),
+        'created_at' => now(),
+    ]);
+
+    // 2. Exécution de la suppression complète de l'école A
+    $schoolA->deleteEntireSchool();
+
+    // 3. Vérification que l'école A et toutes ses données associées ont disparu
+    expect(School::find($schoolA->id))->toBeNull();
+    // Justifié : Vérification de l'absence des utilisateurs sans scope global
+    expect(User::withoutGlobalScopes()->where('school_id', $schoolA->id)->count())->toBe(0);
+    expect(SchoolClass::where('school_id', $schoolA->id)->count())->toBe(0);
+    expect(Child::where('school_id', $schoolA->id)->count())->toBe(0);
+    expect(PickupRequest::where('school_id', $schoolA->id)->count())->toBe(0);
+    expect(DB::table('handover_logs')->where('school_id', $schoolA->id)->count())->toBe(0);
+
+    // 4. Vérification que l'école B et ses données sont intactes
+    expect(School::find($schoolB->id))->not->toBeNull();
+    // Justifié : Vérification de la présence des utilisateurs sans scope global
+    expect(User::withoutGlobalScopes()->where('school_id', $schoolB->id)->count())->toBe(3);
+    expect(DB::table('handover_logs')->where('school_id', $schoolB->id)->count())->toBe(1);
+
+    // 5. Vérification que le trigger handover_logs_ajout_seul est toujours actif pour l'école B
+    expect(function () use ($logB) {
+        DB::transaction(function () use ($logB) {
+            $logB->update(['collector_type' => HandoverLog::COLLECTOR_DAILY_CODE]);
+        });
+    })->toThrow(QueryException::class);
+
+    expect(function () use ($logB) {
+        DB::transaction(function () use ($logB) {
+            $logB->delete();
+        });
+    })->toThrow(QueryException::class);
+});
+
+/**
+ * 10. L'action Delete de ListSchools appelle deleteEntireSchool et supprime l'école.
+ */
+it('permet au super admin de supprimer une école via l\'action de table ListSchools', function () {
+    Filament::setCurrentPanel(Filament::getPanel('super-admin'));
+    $superAdmin = User::factory()->superAdmin()->create();
+    $this->actingAs($superAdmin);
+
+    $school = School::factory()->create(['name' => 'École À Supprimer Livewire']);
+    // Justifié : Création d'un directeur sans scope global
+    $director = User::withoutGlobalScopes()->create([
+        'school_id' => $school->id,
+        'name' => 'Directeur Livewire',
+        'email' => 'director.livewire@test.ma',
+        'password' => 'secret123',
+        'role' => 'director',
+    ]);
+
+    Livewire::test(ListSchools::class)
+        ->callTableAction('delete', $school);
+
+    expect(School::find($school->id))->toBeNull();
+    // Justifié : Vérification sans scope global
+    expect(User::withoutGlobalScopes()->where('school_id', $school->id)->count())->toBe(0);
 });

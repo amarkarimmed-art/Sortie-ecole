@@ -197,6 +197,30 @@ class SchoolResource extends Resource
                             ->persistent()
                             ->send();
                     }),
+
+                Tables\Actions\DeleteAction::make('delete')
+                    ->label('Supprimer')
+                    ->icon('heroicon-o-trash')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (School $record): string => "Supprimer l'école « {$record->name} » ?")
+                    ->modalDescription("Attention : cette action est irréversible. Tous les comptes (directeur, surveillants, parents), classes, élèves et historiques liés à cette école seront définitivement effacés.")
+                    ->modalSubmitActionLabel('Oui, supprimer définitivement')
+                    ->using(function (School $record): void {
+                        $record->deleteEntireSchool();
+                    })
+                    ->successNotificationTitle('École supprimée avec succès'),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->label('Supprimer la sélection')
+                        ->modalHeading('Supprimer les écoles sélectionnées ?')
+                        ->modalDescription('Toutes les données rattachées à ces écoles seront définitivement supprimées.')
+                        ->using(function (\Illuminate\Database\Eloquent\Collection $records): void {
+                            $records->each(fn (School $record) => $record->deleteEntireSchool());
+                        }),
+                ]),
             ])
             ->emptyStateHeading('Aucune école pour le moment, créez la première')
             ->emptyStateDescription('Inscrivez la première école partenaire pour commencer à gérer le réseau.')
