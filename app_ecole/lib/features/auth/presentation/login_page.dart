@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_ui/sortie_ui.dart';
 
+import '../../../core/auth_session_memory.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../main.dart';
 import '../data/auth_repository.dart';
@@ -63,6 +64,15 @@ class _LoginPageState extends State<LoginPage> {
       final schoolLogo = await _storage.read(key: 'auth_school_logo');
 
       if (token != null && token.isNotEmpty && mounted) {
+        AuthSessionMemory.setSession(
+          token: token,
+          userId: null,
+          schoolId: schoolId,
+          userName: userName,
+          userRole: userRole,
+          schoolName: schoolName,
+          schoolLogo: schoolLogo,
+        );
         Navigator.of(context).pushReplacementNamed(
           '/surveillance',
           arguments: {
@@ -95,6 +105,16 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final authResponse = await _repository.login(login, password);
       if (!mounted) return;
+
+      AuthSessionMemory.setSession(
+        token: authResponse.token,
+        userId: authResponse.user.id,
+        schoolId: authResponse.user.schoolId,
+        userName: authResponse.user.name,
+        userRole: authResponse.user.role,
+        schoolName: authResponse.user.schoolName,
+        schoolLogo: authResponse.user.schoolLogo,
+      );
 
       try {
         await _storage.write(key: 'auth_token', value: authResponse.token);
@@ -242,17 +262,17 @@ class _LoginPageState extends State<LoginPage> {
                   Container(
                     decoration: BoxDecoration(
                       color: SortieColors.surface,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(28),
                       border: Border.all(color: SortieColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: SortieColors.textPrimary.withValues(alpha: 0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    padding: const EdgeInsetsDirectional.all(20.0),
+                    padding: const EdgeInsetsDirectional.all(24.0),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -365,30 +385,16 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       children: [
         Container(
-          width: 76,
-          height: 76,
+          width: 72,
+          height: 72,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                SortieColors.primary,
-                SortieColors.primaryDark,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(22),
-            boxShadow: [
-              BoxShadow(
-                color: SortieColors.primary.withValues(alpha: 0.3),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            color: SortieColors.primary.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
           ),
           child: const Icon(
             Icons.school_rounded,
-            size: 40,
-            color: Colors.white,
+            size: 36,
+            color: SortieColors.primary,
           ),
         ),
         const SizedBox(height: 16),
@@ -397,7 +403,8 @@ class _LoginPageState extends State<LoginPage> {
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 22,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.2,
             color: SortieColors.textPrimary,
           ),
         ),

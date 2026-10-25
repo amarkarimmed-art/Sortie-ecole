@@ -38,25 +38,54 @@ class ListActiveQueueAction
             }
 
             // Justifié : Classes assignées au surveillant avec filtrage explicite de l'école
-            $assignedClassNames = $user->schoolClasses()->withoutGlobalScopes()
+            $assignedClasses = $user->schoolClasses()->withoutGlobalScopes()
                 ->where('school_classes.school_id', $school->id)
-                ->pluck('school_classes.name')
+                ->get();
+
+            $assignedClassIds = $assignedClasses->pluck('id')->filter()->all();
+            $assignedClassNames = $assignedClasses->pluck('name')
+                ->filter()
+                ->map(fn ($n) => strtolower(trim((string) $n)))
                 ->all();
 
-            return $query->whereIn('status', [
+            $activeStatuses = [
+                'arrived',
                 PickupRequest::STATUS_PENDING_AGENT_CONFIRMATION,
                 PickupRequest::STATUS_REQUESTED,
                 PickupRequest::STATUS_CLASS_NOTIFIED,
                 PickupRequest::STATUS_ON_THE_WAY,
-            ])
-                ->whereHas('child', function ($cq) use ($assignedClassNames) {
-                    $cq->whereIn('class_name', $assignedClassNames);
+            ];
+
+            // Si aucune classe n'est assignée à ce surveillant, il accède à toute la file active de son école
+            if (empty($assignedClassIds) && empty($assignedClassNames)) {
+                return $query->whereIn('status', $activeStatuses)
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+            }
+
+            $hasSchoolClassIdCol = \Illuminate\Support\Facades\Schema::hasColumn('children', 'school_class_id');
+
+            return $query->whereIn('status', $activeStatuses)
+                ->whereHas('child', function ($cq) use ($assignedClassIds, $assignedClassNames, $hasSchoolClassIdCol) {
+                    $cq->where(function ($inner) use ($assignedClassIds, $assignedClassNames, $hasSchoolClassIdCol) {
+                        $hasCondition = false;
+                        if ($hasSchoolClassIdCol && ! empty($assignedClassIds)) {
+                            $inner->whereIn('children.school_class_id', $assignedClassIds);
+                            $hasCondition = true;
+                        }
+                        if (! empty($assignedClassNames)) {
+                            $placeholders = implode(',', array_fill(0, count($assignedClassNames), '?'));
+                            $method = $hasCondition ? 'orWhereRaw' : 'whereRaw';
+                            $inner->$method("LOWER(TRIM(children.class_name)) IN ({$placeholders})", $assignedClassNames);
+                        }
+                    });
                 })
                 ->orderBy('created_at', 'asc')
                 ->get();
         }
 
         return $query->whereIn('status', [
+            'arrived',
             PickupRequest::STATUS_REQUESTED,
             PickupRequest::STATUS_CLASS_NOTIFIED,
             PickupRequest::STATUS_ON_THE_WAY,

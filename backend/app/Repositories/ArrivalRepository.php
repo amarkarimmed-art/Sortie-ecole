@@ -6,6 +6,7 @@ namespace App\Repositories;
 
 use App\Models\Arrival;
 use App\Repositories\Contracts\ArrivalRepositoryInterface;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 
 class ArrivalRepository extends BaseRepository implements ArrivalRepositoryInterface
@@ -23,6 +24,22 @@ class ArrivalRepository extends BaseRepository implements ArrivalRepositoryInter
         return $this->model->newQuery()
             ->where('user_id', $userId)
             ->where('school_id', $schoolId)
+            ->latest()
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findLatestTodayForUserAndSchool(string $userId, string $schoolId, ?Carbon $now = null): ?Model
+    {
+        $now = $now ?? Carbon::now('Africa/Casablanca');
+
+        return $this->model->newQuery()
+            ->where('user_id', $userId)
+            ->where('school_id', $schoolId)
+            ->whereBetween('created_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()])
+            ->with(['pickupRequests.child'])
             ->latest()
             ->first();
     }

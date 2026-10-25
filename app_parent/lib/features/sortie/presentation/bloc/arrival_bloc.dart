@@ -105,6 +105,8 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
       final arrivalData = data['arrival'];
       final pickupRequests = (data['pickup_requests'] as List?) ?? [];
 
+      final hasActiveCycle = data['has_active_cycle'] as bool?;
+
       String? effectiveStatus;
       String? childName;
 
@@ -115,6 +117,12 @@ class ArrivalBloc extends Bloc<ArrivalEvent, ArrivalState> {
         if (child != null) {
           childName = '${child['first_name'] ?? ''} ${child['last_name'] ?? ''}'.trim();
         }
+      }
+
+      // Si aucune arrivée ou cycle inactif sans demandes en cours, réinitialiser à l'état initial
+      if (arrivalData == null && (hasActiveCycle == false || pickupRequests.isEmpty)) {
+        emit(const ArrivalInitial());
+        return;
       }
 
       final arrivalResponse = arrivalData != null

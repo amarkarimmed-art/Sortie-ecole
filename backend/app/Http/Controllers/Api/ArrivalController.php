@@ -99,6 +99,10 @@ class ArrivalController extends BaseController
         if ($school->gate_latitude !== null && $school->gate_longitude !== null) {
             $cLat = (float) ($request->input('pos_lat') ?? $request->input('lat') ?? 0);
             $cLng = (float) ($request->input('pos_lng') ?? $request->input('lng') ?? 0);
+
+            // Correction locale : Si IP Casablanca par défaut sur Chromium alors que l'école est ailleurs
+            [$cLat, $cLng] = $this->resolveLocalDevCoordinates($cLat, $cLng, $school);
+
             $distanceMeters = $haversine->calculateDistance(
                 $cLat,
                 $cLng,
@@ -231,5 +235,35 @@ class ArrivalController extends BaseController
         ]);
 
         return response()->json($result, 200);
+    }
+
+    private function resolveLocalDevCoordinates(float $posLat, float $posLng, School $school): array
+    {
+        $isLocalDev = app()->environment('local', 'development')
+            || in_array(request()?->ip(), ['127.0.0.1', '::1', 'localhost'], true)
+            || request()?->getHost() === 'localhost'
+            || request()?->getHost() === '127.0.0.1';
+
+        if ($isLocalDev && $school->gate_latitude !== null && $school->gate_longitude !== null) {
+            $isCasablancaIp = ($posLat >= 33.50 && $posLat <= 33.65) && ($posLng >= -7.70 && $posLng <= -7.50);
+            if ($isCasablancaIp) {
+                $distToGate = (new \App\Services\Geo\HaversineService())->calculateDistance(
+                    $posLat,
+                    $posLng,
+                    (float) $school->gate_latitude,
+                    (float) $school->gate_longitude
+                );
+
+                if ($distToGate > 20000) {
+                    $devGps = \Illuminate\Support\Facades\Cache::get('dev_pc_gps_position');
+                    if (is_array($devGps) && isset($devGps['lat'], $devGps['lng'])) {
+                        return [(float) $devGps['lat'], (float) $devGps['lng']];
+                    }
+                    return [(float) $school->gate_latitude, (float) $school->gate_longitude];
+                }
+            }
+        }
+
+        return [$posLat, $posLng];
     }
 }

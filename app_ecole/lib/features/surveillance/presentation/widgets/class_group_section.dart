@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sortie_ui/sortie_ui.dart';
 
 import '../../../../l10n/app_localizations.dart';
 import '../../data/surveillance_repository.dart';
@@ -28,7 +29,6 @@ class ClassGroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
     return Padding(
@@ -36,42 +36,58 @@ class ClassGroupSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête de classe
+          // En-tête de classe style Google Classroom / Contacts
           Padding(
             padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 8.0,
-              vertical: 6.0,
+              horizontal: 4.0,
+              vertical: 8.0,
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.school,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8.0),
-                Text(
-                  className.isNotEmpty ? className : (l10n?.sansClasse ?? 'Sans classe'),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+                Container(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 12.0,
+                    vertical: 6.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: SortieColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.school_rounded,
+                        size: 18,
+                        color: SortieColors.primary,
+                      ),
+                      const SizedBox(width: 8.0),
+                      Text(
+                        className.isNotEmpty ? className : (l10n?.sansClasse ?? 'Sans classe'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: SortieColors.primary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8.0),
                 Container(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                    horizontal: 8.0,
-                    vertical: 2.0,
+                  width: 24,
+                  height: 24,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFD3E3FD),
+                    shape: BoxShape.circle,
                   ),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
+                  alignment: Alignment.center,
                   child: Text(
                     '${items.length}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
+                    style: const TextStyle(
+                      color: Color(0xFF041E49),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -81,7 +97,7 @@ class ClassGroupSection extends StatelessWidget {
           const SizedBox(height: 4.0),
           // Liste des élèves de cette classe
           ...items.map((item) => ChildCallCard(
-                key: ValueKey(item.requestId),
+                key: ValueKey('${item.requestId}_${item.status}'),
                 item: item,
                 repository: repository,
                 onDepart: onDepart,

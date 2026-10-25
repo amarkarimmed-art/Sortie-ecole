@@ -403,6 +403,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PickupRequestSummary'
+        has_active_cycle:
+          type: boolean
+          description: Indique si un cycle d'arrivée est actuellement actif pour aujourd'hui
       required: [arrival, pickup_requests]
 
     PickupActionResponse:

@@ -255,6 +255,57 @@ class ManageSchoolLogo extends Page implements HasForms
             ->send();
     }
 
+    public function saveGateLocation(float $lat, float $lng, bool $isFromBrowserGps = false): void
+    {
+        $school = $this->getSchool();
+        if (! $school) return;
+
+        $lat = round($lat, 6);
+        $lng = round($lng, 6);
+
+        $this->data['gate_latitude'] = $lat;
+        $this->data['gate_longitude'] = $lng;
+
+        // Sauvegarde immédiate de la position du portail de l'école courante
+        School::withoutGlobalScopes()
+            ->where('id', auth()->user()->school_id)
+            ->update([
+                'gate_latitude' => $lat,
+                'gate_longitude' => $lng,
+            ]);
+
+        if ($isFromBrowserGps) {
+            \Illuminate\Support\Facades\Cache::forever('dev_pc_gps_position', [
+                'lat' => $lat,
+                'lng' => $lng,
+            ]);
+        }
+
+        Notification::make()
+            ->title('Position du portail enregistrée en base !')
+            ->success()
+            ->send();
+    }
+
+    public function saveRadius(int $radius): void
+    {
+        $school = $this->getSchool();
+        if (! $school) return;
+
+        $this->data['perimeter_radius'] = $radius;
+        $this->data['radius_meters'] = $radius;
+
+        // Sauvegarde immédiate du rayon de périmètre de l'école courante
+        School::withoutGlobalScopes()
+            ->where('id', auth()->user()->school_id)
+            ->update(['perimeter_radius' => $radius]);
+
+        Notification::make()
+            ->title("Rayon de {$radius} m enregistré !")
+            ->success()
+            ->send();
+    }
+
     public function setActiveDay(int $day): void
     {
         $this->activeDay = $day;

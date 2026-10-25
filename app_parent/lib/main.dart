@@ -105,6 +105,47 @@ class SortieParentApp extends StatelessWidget {
           Locale('fr'),
           Locale('ar'),
         ],
+        builder: (context, child) {
+          if (child == null) return const SizedBox.shrink();
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth <= 500) {
+                return child;
+              }
+              return Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE2E8F0), Color(0xFFF0F4F9)],
+                  ),
+                ),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: SortieColors.background,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.08),
+                            blurRadius: 24,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(32),
+                        child: child,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
         home: const AppAuthRoot(),
       ),
     );

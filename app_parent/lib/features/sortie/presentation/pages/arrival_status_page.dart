@@ -231,45 +231,6 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     }
   }
 
-  bool _shouldShowGateValidationButton(ArrivalState state) {
-    if (state is ArrivalSuccess) return false;
-    if (_scheduleStatus?.isOpen != true) return false;
-    final isNotInPerimeter =
-        _locationEvaluation == null || !_locationEvaluation!.canSignalArrival;
-    final hasGpsIssue = _gpsErrorMessage != null || state is ArrivalFailure;
-    return isNotInPerimeter || hasGpsIssue;
-  }
-
-  Future<void> _validateGatePosition() async {
-    setState(() => _evaluatingLocation = true);
-    try {
-      final gateLat = _scheduleStatus?.gateLatitude ?? 33.5731;
-      final gateLng = _scheduleStatus?.gateLongitude ?? -7.5898;
-
-      final repo = context.read<ArrivalBloc>().arrivalRepository;
-      final eval = await repo.evaluateLocation(
-        LocationEvaluationRequestDto(
-          posLat: gateLat,
-          posLng: gateLng,
-          accuracyMeters: 10,
-          capturedAt: clock.now().toUtc(),
-        ),
-      );
-
-      if (mounted) {
-        setState(() {
-          _locationEvaluation = eval;
-          _gpsErrorMessage = null;
-          _evaluatingLocation = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _evaluatingLocation = false);
-      }
-    }
-  }
-
   Future<void> _loadSchoolBranding() async {
     try {
       final name = AuthSessionMemory.schoolName ??
@@ -387,33 +348,39 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_schoolLogo != null && _schoolLogo!.isNotEmpty)
               Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8.0),
+                padding: const EdgeInsetsDirectional.only(end: 10.0),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(10),
                   child: Image.network(
                     _schoolLogo!,
-                    width: 28,
-                    height: 28,
+                    width: 32,
+                    height: 32,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.school, size: 24),
+                        const Icon(Icons.school_rounded, size: 24, color: SortieColors.primary),
                   ),
                 ),
               )
             else
               const Padding(
-                padding: EdgeInsetsDirectional.only(end: 8.0),
-                child: Icon(Icons.school, size: 24),
+                padding: EdgeInsetsDirectional.only(end: 10.0),
+                child: Icon(Icons.school_rounded, size: 24, color: SortieColors.primary),
               ),
             Flexible(
               child: Text(
                 _schoolName ?? "Sortie d'école",
                 overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
               ),
             ),
           ],
@@ -426,22 +393,30 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
             initialData: _reverbService?.isConnected ?? false,
             builder: (context, snapshot) {
               final isConnected = snapshot.data ?? false;
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 4.0),
+              return Container(
+                margin: const EdgeInsetsDirectional.only(end: 8.0),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isConnected ? const Color(0xFFE6F4EA) : const Color(0xFFFEF7E0),
+                  borderRadius: BorderRadius.circular(20),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isConnected ? Icons.wifi : Icons.wifi_off,
-                      size: 18,
-                      color: isConnected ? Colors.green : Colors.orange,
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: isConnected ? const Color(0xFF137333) : const Color(0xFFB06000),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                    const SizedBox(width: 4.0),
+                    const SizedBox(width: 6.0),
                     Text(
                       isConnected ? 'En direct' : 'Synchronisation...',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isConnected ? Colors.green : Colors.orange,
+                        color: isConnected ? const Color(0xFF137333) : const Color(0xFFB06000),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -450,29 +425,49 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
               );
             },
           ),
-          IconButton(
-            tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                _loadScheduleStatus();
-                context
-                    .read<ArrivalBloc>()
-                    .add(const RefreshArrivalStatusRequested());
-              });
-            },
+          Container(
+            margin: const EdgeInsetsDirectional.only(end: 6.0),
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8EEF5),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              tooltip: 'Actualiser',
+              icon: const Icon(Icons.refresh_rounded, size: 20, color: SortieColors.textPrimary),
+              onPressed: () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _loadScheduleStatus();
+                  context
+                      .read<ArrivalBloc>()
+                      .add(const RefreshArrivalStatusRequested());
+                });
+              },
+            ),
           ),
-          IconButton(
-            key: const Key('parent_logout_button'),
-            tooltip: 'Déconnexion',
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) return;
-                _handleLogout();
-              });
-            },
+          Container(
+            margin: const EdgeInsetsDirectional.only(end: 12.0),
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8EEF5),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              key: const Key('parent_logout_button'),
+              padding: EdgeInsets.zero,
+              tooltip: 'Déconnexion',
+              icon: const Icon(Icons.logout_rounded, size: 18, color: SortieColors.textPrimary),
+              onPressed: () {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  _handleLogout();
+                });
+              },
+            ),
           ),
         ],
       ),
@@ -523,66 +518,76 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                 children: [
                   _buildScheduleStatusBanner(),
                   _buildGpsErrorBanner(),
-                  // En-tête informatif avec nom et logo de l'école
-                  Card(
-                    elevation: 0,
-                    color: SortieColors.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: SortieColors.border),
+                  // En-tête informatif avec nom et logo de l'école (Style M3)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: SortieColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.all(16.0),
-                      child: Row(
-                        children: [
-                          if (_schoolLogo != null && _schoolLogo!.isNotEmpty)
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                _schoolLogo!,
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.school_rounded,
-                                  size: 36,
-                                  color: SortieColors.primary,
+                    padding: const EdgeInsetsDirectional.all(18.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: SortieColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: (_schoolLogo != null && _schoolLogo!.isNotEmpty)
+                                ? Image.network(
+                                    _schoolLogo!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                      Icons.school_rounded,
+                                      size: 26,
+                                      color: SortieColors.primary,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.school_rounded,
+                                    size: 26,
+                                    color: SortieColors.primary,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _schoolName ?? 'Portail de sortie',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: SortieColors.textPrimary,
                                 ),
                               ),
-                            )
-                          else
-                            const Icon(
-                              Icons.school_rounded,
-                              size: 36,
-                              color: SortieColors.primary,
-                            ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _schoolName ?? 'Portail de sortie',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: SortieColors.textPrimary,
-                                  ),
+                              const SizedBox(height: 3),
+                              const Text(
+                                'Signalez votre arrivée dès que vous êtes à proximité de l\'école.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: SortieColors.textSecondary,
+                                  height: 1.3,
                                 ),
-                                const SizedBox(height: 4),
-                                const Text(
-                                  'Signalez votre arrivée dès que vous êtes à proximité de l\'école.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: SortieColors.textSecondary,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -603,39 +608,56 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                       },
                     )
                   else
-                    // État initial d'invitation à cliquer
+                    // État initial d'invitation à cliquer (Halo M3)
                     Container(
                       padding: const EdgeInsetsDirectional.all(24),
                       decoration: BoxDecoration(
-                        color: SortieColors.surface,
-                        borderRadius: BorderRadius.circular(16),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
                         border: Border.all(color: SortieColors.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 16,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      child: const Column(
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.touch_app_rounded,
-                            size: 48,
-                            color: SortieColors.primaryLight,
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: SortieColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.touch_app_rounded,
+                              size: 38,
+                              color: SortieColors.primary,
+                            ),
                           ),
-                          SizedBox(height: 12),
-                          Text(
+                          const SizedBox(height: 16),
+                          const Text(
                             'Vous êtes devant l\'école ?',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              letterSpacing: -0.2,
                               color: SortieColors.textPrimary,
                             ),
                           ),
-                          SizedBox(height: 6),
-                          Text(
+                          const SizedBox(height: 6),
+                          const Text(
                             'Appuyez sur le bouton ci-dessous pour avertir l\'équipe scolaire de votre présence.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14,
                               color: SortieColors.textSecondary,
+                              height: 1.4,
                             ),
                           ),
                         ],
@@ -648,11 +670,6 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                     _buildProgressTimeline(currentStatus),
                   ],
 
-                  if (_shouldShowGateValidationButton(state)) ...[
-                    const SizedBox(height: 16),
-                    _buildGatePositionValidationButton(),
-                  ],
-
                   const SizedBox(height: 24),
 
                   // Bouton d'action principal (taille tactile ≥ 48dp)
@@ -660,9 +677,31 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                     builder: (btnCtx) {
                       String buttonLabel = 'Je suis arrivé'; // hardcoded-ok
                       VoidCallback? onButtonClick;
+                      IconData buttonIcon = Icons.near_me_rounded;
 
-                      if (isSuccess) {
+                      final isHandedOver = currentStatus == 'handed_over';
+
+                      if (_scheduleStatus != null &&
+                          !_scheduleStatus!.isOpen) {
+                        buttonLabel = _scheduleStatus!.nextOpeningAt != null
+                            ? 'La sortie commence à ${_scheduleStatus!.nextOpeningAt}'
+                            : 'Sortie fermée'; // hardcoded-ok
+                        buttonIcon = Icons.lock_clock_rounded;
+                        onButtonClick = null;
+                      } else if (isSuccess && isHandedOver) {
+                        buttonLabel = 'Nouvelle sortie (Je suis arrivé)'; // hardcoded-ok
+                        buttonIcon = Icons.near_me_rounded;
+                        onButtonClick = () {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            context
+                                .read<ArrivalBloc>()
+                                .add(const SignalArrivalRequested());
+                          });
+                        };
+                      } else if (isSuccess) {
                         buttonLabel = 'Actualiser le statut'; // hardcoded-ok
+                        buttonIcon = Icons.refresh_rounded;
                         onButtonClick = () {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (!mounted) return;
@@ -672,21 +711,17 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                             _fetchScheduleStatus();
                           });
                         };
-                      } else if (_scheduleStatus != null &&
-                          !_scheduleStatus!.isOpen) {
-                        buttonLabel = _scheduleStatus!.nextOpeningAt != null
-                            ? 'La sortie commence à ${_scheduleStatus!.nextOpeningAt}'
-                            : 'Sortie fermée'; // hardcoded-ok
-                        onButtonClick = null;
                       } else if (_locationEvaluation != null &&
                           !_locationEvaluation!.canSignalArrival) {
                         final dist = _locationEvaluation!.distanceMeters ?? 0;
                         final lim = _locationEvaluation!.perimeterRadius ?? 50;
                         buttonLabel =
                             'Vous êtes à $dist m, rapprochez-vous (limite : $lim m)';
+                        buttonIcon = Icons.near_me_disabled_rounded;
                         onButtonClick = null;
                       } else {
                         buttonLabel = 'Je suis arrivé'; // hardcoded-ok
+                        buttonIcon = Icons.near_me_rounded;
                         onButtonClick = () {
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (!mounted) return;
@@ -699,9 +734,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
 
                       return SortiePrimaryButton(
                         label: buttonLabel,
-                        icon: isSuccess
-                            ? Icons.refresh_rounded
-                            : Icons.near_me_rounded,
+                        icon: buttonIcon,
                         isLoading: isLoading,
                         onPressed: onButtonClick,
                       );
@@ -717,62 +750,44 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     );
   }
 
-  Widget _buildGatePositionValidationButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: _evaluatingLocation ? null : _validateGatePosition,
-        icon: const Icon(Icons.check_circle_outline, color: SortieColors.primary, size: 20),
-        label: const Text(
-          'Je suis devant le portail ( Valider ma position )',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-        ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: SortieColors.primary,
-          side: const BorderSide(color: SortieColors.primary, width: 1.5),
-          minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-
   Widget _buildProgressTimeline(String currentStatus) {
     final normalized = currentStatus.toLowerCase();
+
+    // Progression rigoureuse en 4 étapes
+    int activeStepCount = 1;
+    if (normalized == 'handed_over') {
+      activeStepCount = 4;
+    } else if (normalized == 'on_the_way') {
+      activeStepCount = 3;
+    } else if (normalized == 'class_notified') {
+      activeStepCount = 2;
+    } else {
+      activeStepCount = 1;
+    }
+
     final steps = [
       {
         'title': "Arrivée signalée (en attente d'appel)",
-        'active': [
-          'requested',
-          'pending_agent_confirmation',
-          'processed',
-          'class_notified',
-          'on_the_way',
-          'handed_over'
-        ].contains(normalized),
-        'done': ['class_notified', 'on_the_way', 'handed_over']
-            .contains(normalized),
+        'active': activeStepCount >= 1,
+        'done': activeStepCount > 1,
         'icon': Icons.near_me_rounded,
       },
       {
         'title': "Classe prévenue — Votre enfant est appelé",
-        'active': ['class_notified', 'on_the_way', 'handed_over']
-            .contains(normalized),
-        'done': ['on_the_way', 'handed_over'].contains(normalized),
+        'active': activeStepCount >= 2,
+        'done': activeStepCount > 2,
         'icon': Icons.campaign_rounded,
       },
       {
         'title': "Enfant en chemin vers le portail",
-        'active': ['on_the_way', 'handed_over'].contains(normalized),
-        'done': ['handed_over'].contains(normalized),
+        'active': activeStepCount >= 3,
+        'done': activeStepCount > 3,
         'icon': Icons.directions_walk_rounded,
       },
       {
         'title': "Enfant remis — Bonne rentrée !",
-        'active': normalized == 'handed_over',
-        'done': normalized == 'handed_over',
+        'active': activeStepCount >= 4,
+        'done': activeStepCount >= 4,
         'icon': Icons.sentiment_very_satisfied_rounded,
       },
     ];
@@ -817,9 +832,7 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
     required IconData icon,
     required bool isLast,
   }) {
-    final color = isDone
-        ? SortieColors.success
-        : (isActive ? SortieColors.primary : SortieColors.textSecondary);
+    final color = isActive ? SortieColors.success : SortieColors.textSecondary;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,7 +852,9 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
                 ),
               ),
               child: Icon(
-                isDone ? Icons.check : icon,
+                isActive
+                    ? (isDone ? Icons.check : icon)
+                    : Icons.radio_button_unchecked_rounded,
                 size: 16,
                 color: isActive ? color : Colors.grey.shade400,
               ),
@@ -881,31 +896,39 @@ class _ArrivalStatusPageState extends State<ArrivalStatusPage> {
         : (_scheduleStatus!.messageFr.isNotEmpty ? _scheduleStatus!.messageFr : (isOpen ? 'Sortie ouverte' : 'Sortie fermée'));
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsetsDirectional.only(bottom: 16),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isOpen ? const Color(0xFFF0FDF4) : const Color(0xFFFFFBEB),
-        borderRadius: BorderRadius.circular(12),
+        color: isOpen ? const Color(0xFFE6F4EA) : const Color(0xFFFEF7E0),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isOpen ? SortieColors.success : SortieColors.warning,
-          width: 1.5,
+          color: isOpen ? const Color(0xFFCEEAD6) : const Color(0xFFFEEFC3),
+          width: 1,
         ),
       ),
       child: Row(
         children: [
-          Icon(
-            isOpen ? Icons.check_circle_outline : Icons.access_time_rounded,
-            color: isOpen ? SortieColors.success : SortieColors.warning,
-            size: 20,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isOpen ? const Color(0xFFCEEAD6) : const Color(0xFFFEEFC3),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isOpen ? Icons.check_circle_rounded : Icons.access_time_rounded,
+              color: isOpen ? const Color(0xFF137333) : const Color(0xFFB06000),
+              size: 18,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               message,
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isOpen ? const Color(0xFF166534) : const Color(0xFF92400E),
+                color: isOpen ? const Color(0xFF137333) : const Color(0xFFB06000),
               ),
             ),
           ),

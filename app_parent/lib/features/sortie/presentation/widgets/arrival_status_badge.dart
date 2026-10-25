@@ -4,7 +4,7 @@ import 'package:sortie_ui/sortie_ui.dart';
 import '../../domain/failures/arrival_exceptions.dart';
 import '../bloc/arrival_state.dart';
 
-/// Badge dynamique de statut d'arrivée F03.
+/// Badge dynamique de statut d'arrivée F03 (Style Google Material 3).
 ///
 /// Affiche l'état visuel approprié selon l'état du BLoC :
 /// - En cours (recherche GPS / envoi serveur)
@@ -51,9 +51,10 @@ class ArrivalStatusBadge extends StatelessWidget {
           : (success.response.textFr ?? 'Votre arrivée a bien été confirmée auprès de l\'école.');
 
       return _buildCard(
-        backgroundColor: const Color(0xFFF0FDF4), // Green 50
-        borderColor: SortieColors.success,
-        iconColor: SortieColors.success,
+        backgroundColor: Colors.white,
+        borderColor: const Color(0xFFCEEAD6),
+        iconColor: const Color(0xFF137333),
+        haloColor: const Color(0xFFE6F4EA),
         icon: Icons.check_circle_rounded,
         title: 'Arrivée confirmée',
         message: message,
@@ -81,56 +82,63 @@ class ArrivalStatusBadge extends StatelessWidget {
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(20),
+      padding: const EdgeInsetsDirectional.all(24),
       decoration: BoxDecoration(
-        color: SortieColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SortieColors.primaryLight, width: 1.5),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFD3E3FD), width: 1.5),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
+            color: Color(0x08000000),
+            blurRadius: 16,
             offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(SortieColors.primary),
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: Color(0xFFE8F0FE),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(SortieColors.primary),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Icon(icon, color: SortieColors.primary, size: 24),
-            ],
+                Icon(icon, color: SortieColors.primary, size: 28),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
+              letterSpacing: -0.2,
               color: SortieColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,
               color: SortieColors.textSecondary,
+              height: 1.4,
             ),
           ),
         ],
@@ -141,69 +149,73 @@ class ArrivalStatusBadge extends StatelessWidget {
   Widget _buildOutOfRadiusBadge(BuildContext context, String message) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(20),
+      padding: const EdgeInsetsDirectional.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFBEB), // Amber 50
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SortieColors.warning, width: 2),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFEEFC3), width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.location_off_rounded,
-                color: SortieColors.warning,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Trop loin de l\'école',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF92400E), // Amber 900
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      message,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFB45309), // Amber 700
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF7E0),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.location_off_rounded,
+              color: Color(0xFFB06000),
+              size: 34,
+            ),
           ),
           const SizedBox(height: 16),
+          const Text(
+            'Trop loin de l\'école',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.2,
+              color: Color(0xFF92400E),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFFB45309),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
           // Bouton de rafraîchissement avec zone tactile ≥ 48dp
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: OutlinedButton.icon(
               onPressed: onRefreshLocation,
               icon: const Icon(Icons.refresh_rounded, size: 20),
               label: const Text('Actualiser ma position'), // hardcoded-ok
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF92400E),
-                side: const BorderSide(color: SortieColors.warning, width: 1.5),
+                side: const BorderSide(color: Color(0xFFF59E0B), width: 1.5),
                 minimumSize: const Size(64, 48), // Cible tactile ≥ 48dp
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
             ),
           ),
@@ -215,57 +227,61 @@ class ArrivalStatusBadge extends StatelessWidget {
   Widget _buildCriticalErrorBadge(BuildContext context, ArrivalFailure failure) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(20),
+      padding: const EdgeInsetsDirectional.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF2F2), // Red 50
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: SortieColors.error, width: 2),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFECDCA), width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.error_outline_rounded,
-                color: SortieColors.error,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Signalement impossible',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF991B1B), // Red 800
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      failure.message,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFB91C1C), // Red 700
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF2F2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline_rounded,
+              color: SortieColors.error,
+              size: 34,
+            ),
           ),
           const SizedBox(height: 16),
+          const Text(
+            'Signalement impossible',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.2,
+              color: Color(0xFF991B1B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            failure.message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFFB91C1C),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
           // Bouton de réessai avec zone tactile ≥ 48dp
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.replay_rounded, size: 20),
@@ -273,11 +289,12 @@ class ArrivalStatusBadge extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: SortieColors.error,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 minimumSize: const Size(64, 48), // Cible tactile ≥ 48dp
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
             ),
           ),
@@ -290,46 +307,57 @@ class ArrivalStatusBadge extends StatelessWidget {
     required Color backgroundColor,
     required Color borderColor,
     required Color iconColor,
+    required Color haloColor,
     required IconData icon,
     required String title,
     required String message,
   }) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsetsDirectional.all(20),
+      padding: const EdgeInsetsDirectional.all(24),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor, width: 2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x08000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: iconColor, size: 30),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: iconColor,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: SortieColors.textPrimary,
-                    height: 1.4,
-                  ),
-                ),
-              ],
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: haloColor,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: iconColor, size: 38),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.2,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: SortieColors.textPrimary,
+              height: 1.4,
             ),
           ),
         ],

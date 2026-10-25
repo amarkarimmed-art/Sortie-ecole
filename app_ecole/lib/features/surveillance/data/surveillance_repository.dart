@@ -216,53 +216,100 @@ class SurveillanceRepository {
   }
 
   void _handleArrivalSignaledEvent(ArrivalSignaledEvent event) {
-    final effectiveRequestId = (event.requestId != null && event.requestId!.isNotEmpty)
-        ? event.requestId!
-        : event.arrivalId;
+    if (event.children.isNotEmpty) {
+      for (final child in event.children) {
+        if (child is Map<String, dynamic> || child is Map) {
+          final cMap = Map<String, dynamic>.from(child as Map);
+          final cReqId = cMap['request_id']?.toString() ?? event.requestId ?? event.arrivalId;
+          final cChildId = cMap['id']?.toString() ?? '';
+          final cName = '${cMap['first_name'] ?? ''} ${cMap['last_name'] ?? ''}'.trim();
+          final cClass = cMap['class_name']?.toString() ?? '';
+          final initial = cName.isNotEmpty ? '${cName[0]}.' : '';
 
-    final index = _currentItems.indexWhere(
-      (i) =>
-          i.requestId == effectiveRequestId ||
-          i.requestId == event.arrivalId ||
-          (event.studentId != null &&
-              event.studentId!.isNotEmpty &&
-              i.childId == event.studentId),
-    );
+          final idx = _currentItems.indexWhere(
+            (i) => i.requestId == cReqId || (cChildId.isNotEmpty && i.childId == cChildId),
+          );
 
-    if (index >= 0) {
-      // Déjà présent : mise à jour
-      final existing = _currentItems[index];
-      _currentItems[index] = existing.copyWith(
-        requestId: effectiveRequestId,
-        liveDistanceMeters: event.liveDistanceMeters,
-        proximityState: event.proximityState,
-        parentName: event.parentName ?? existing.parentName,
-        arrivedAt: event.arrivedAt ?? existing.arrivedAt,
-      );
+          if (idx >= 0) {
+            _currentItems[idx] = _currentItems[idx].copyWith(
+              requestId: cReqId,
+              status: 'requested',
+              liveDistanceMeters: event.liveDistanceMeters,
+              proximityState: event.proximityState,
+              parentName: event.parentName ?? _currentItems[idx].parentName,
+              arrivedAt: event.arrivedAt ?? _currentItems[idx].arrivedAt,
+            );
+          } else {
+            _currentItems.add(SurveillanceItem(
+              requestId: cReqId,
+              childId: cChildId,
+              childInitial: initial,
+              childName: cName.isNotEmpty ? cName : initial,
+              className: cClass,
+              calledAt: clock.now(),
+              status: 'requested',
+              parentName: event.parentName,
+              liveDistanceMeters: event.liveDistanceMeters,
+              proximityState: event.proximityState,
+              arrivedAt: event.arrivedAt,
+            ));
+          }
+        }
+      }
     } else {
-      final rawName = event.studentName ?? '';
-      final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
-      final newItem = SurveillanceItem(
-        requestId: effectiveRequestId,
-        childId: event.studentId ?? '',
-        childInitial: initial,
-        childName: rawName.isNotEmpty ? rawName : initial,
-        className: event.className ?? '',
-        calledAt: clock.now(),
-        status: 'class_notified',
-        parentName: event.parentName,
-        liveDistanceMeters: event.liveDistanceMeters,
-        proximityState: event.proximityState,
-        arrivedAt: event.arrivedAt,
+      final effectiveRequestId = (event.requestId != null && event.requestId!.isNotEmpty)
+          ? event.requestId!
+          : event.arrivalId;
+
+      final index = _currentItems.indexWhere(
+        (i) =>
+            i.requestId == effectiveRequestId ||
+            i.requestId == event.arrivalId ||
+            (event.studentId != null &&
+                event.studentId!.isNotEmpty &&
+                i.childId == event.studentId),
       );
-      _currentItems.add(newItem);
-      _newArrivalAlertController.add(event);
+
+      if (index >= 0) {
+        // Déjà présent : mise à jour
+        final existing = _currentItems[index];
+        _currentItems[index] = existing.copyWith(
+          requestId: effectiveRequestId,
+          status: 'requested',
+          liveDistanceMeters: event.liveDistanceMeters,
+          proximityState: event.proximityState,
+          parentName: event.parentName ?? existing.parentName,
+          arrivedAt: event.arrivedAt ?? existing.arrivedAt,
+        );
+      } else {
+        final rawName = event.studentName ?? '';
+        final initial = rawName.isNotEmpty ? '${rawName[0]}.' : '';
+        final newItem = SurveillanceItem(
+          requestId: effectiveRequestId,
+          childId: event.studentId ?? '',
+          childInitial: initial,
+          childName: rawName.isNotEmpty ? rawName : initial,
+          className: event.className ?? '',
+          calledAt: clock.now(),
+          status: 'requested',
+          parentName: event.parentName,
+          liveDistanceMeters: event.liveDistanceMeters,
+          proximityState: event.proximityState,
+          arrivedAt: event.arrivedAt,
+        );
+        _currentItems.add(newItem);
+      }
     }
+
+    _newArrivalAlertController.add(event);
 
     _stateController.add(SurveillanceLoaded(
       items: List.from(_currentItems),
       isResyncing: false,
     ));
+
+    // Déclencher un rechargement complet de la file d'attente pour synchroniser avec la base
+    reloadFromQueue();
   }
 
   void _handleParentApproachingEvent(ParentApproachingEvent event) {

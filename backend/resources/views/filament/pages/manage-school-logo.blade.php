@@ -287,6 +287,7 @@
 
                         this.map.on('click', (e) => {
                             this.updatePosition(e.latlng.lat, e.latlng.lng);
+                            $wire.saveGateLocation(e.latlng.lat, e.latlng.lng, false);
                         });
 
                         // Surveiller les changements de rayon
@@ -306,6 +307,7 @@
                         this.marker.on('dragend', (e) => {
                             const pos = e.target.getLatLng();
                             this.updatePosition(pos.lat, pos.lng);
+                            $wire.saveGateLocation(pos.lat, pos.lng, false);
                         });
                         this.marker.bindPopup("<b>Portail de l'école</b>").openPopup();
                     }
@@ -334,6 +336,7 @@
                     if (this.circle) {
                         this.circle.setRadius(r);
                     }
+                    $wire.saveRadius(r);
                 },
 
                 locateAdmin() {
@@ -346,6 +349,7 @@
                         const lng = pos.coords['long' + 'itude'];
                         this.updatePosition(lat, lng);
                         this.map.setView([lat, lng], 17);
+                        $wire.saveGateLocation(lat, lng, true);
                     }, (err) => {
                         alert("Impossible de récupérer votre position : " + err.message);
                     }, { enableHighAccuracy: true });

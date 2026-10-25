@@ -58,6 +58,22 @@ class SuperAdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->renderHook(
+                'panels::head.end',
+                fn (): string => '<style>
+                    html:not(.dark) body, html:not(.dark) .fi-layout, html:not(.dark) .fi-main {
+                        background-color: #F0F4F9 !important;
+                    }
+                    .fi-section, .fi-card, .fi-ta-ctn, .fi-ta-content {
+                        border-radius: 20px !important;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03) !important;
+                        border-color: #E0E3E7 !important;
+                    }
+                    .fi-sidebar-item-button, .fi-btn {
+                        border-radius: 9999px !important;
+                    }
+                </style>',
+            );
     }
 }

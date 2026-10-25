@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sortie_models/sortie_models.dart';
+import 'package:sortie_ui/sortie_ui.dart';
 
+import '../../../core/auth_session_memory.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/services/reverb_service.dart';
 import '../../auth/data/auth_repository.dart';
@@ -43,49 +45,81 @@ class SurveillanceScreen extends StatefulWidget {
 }
 
 class _SurveillanceScreenState extends State<SurveillanceScreen> {
-  late final SurveillanceRepository _repository;
+  late SurveillanceRepository _repository;
   bool _ownsRepository = false;
   StreamSubscription<PickupRequestDepartedEvent>? _departedSubscription;
   StreamSubscription<ArrivalSignaledEvent>? _newArrivalSubscription;
 
   String? _effectiveToken;
+  String? _effectiveSchoolId;
   String? _schoolName;
   String? _schoolLogo;
   ScheduleStatusDto? _scheduleStatus;
   Timer? _schedulePollingTimer;
+  Timer? _queuePollingTimer;
 
   @override
   void initState() {
     super.initState();
-    _effectiveToken = widget.token;
-    _schoolName = widget.schoolName;
-    _schoolLogo = widget.schoolLogo;
+    _effectiveToken = widget.token ?? AuthSessionMemory.token;
+    _effectiveSchoolId = widget.schoolId ?? AuthSessionMemory.schoolId ?? 'a308ef34-99df-4f01-ab91-8c3eb47bf72a';
+    _schoolName = widget.schoolName ?? AuthSessionMemory.schoolName;
+    _schoolLogo = widget.schoolLogo ?? AuthSessionMemory.schoolLogo;
 
-    final effectiveSchoolId =
-        widget.schoolId ?? 'a3000c08-8f84-4bff-8c3f-81ebf2b014dd';
+    _initRepository(
+      schoolId: _effectiveSchoolId!,
+      token: _effectiveToken,
+    );
+
+    _loadStorageInfo();
+
+    _loadScheduleStatus();
+    _schedulePollingTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => _loadScheduleStatus(),
+    );
+
+    // Polling régulier de la file d'attente toutes les 5s (garantit l'arrivée immédiate de la carte même en cas d'intermittence WebSocket)
+    _queuePollingTimer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) {
+        if (mounted) {
+          _repository.reloadFromQueue(token: _effectiveToken ?? widget.token);
+        }
+      },
+    );
+  }
+
+  void _initRepository({required String schoolId, String? token}) {
     if (widget.repository != null) {
       _repository = widget.repository!;
+      _ownsRepository = false;
     } else {
+      if (_ownsRepository) {
+        _departedSubscription?.cancel();
+        _newArrivalSubscription?.cancel();
+        _repository.reverbService.disconnect();
+        _repository.dispose();
+        _repository.reverbService.dispose();
+      }
       final reverb = widget.reverbService ??
           ReverbService(
             baseUrl: 'ws://127.0.0.1:8080',
-            schoolId: effectiveSchoolId,
+            schoolId: schoolId,
           );
       _repository = SurveillanceRepository(
         baseUrl: 'http://127.0.0.1:8000',
-        schoolId: effectiveSchoolId,
+        schoolId: schoolId,
         reverbService: reverb,
       );
       _ownsRepository = true;
     }
 
-    _loadStorageInfo();
-
     _repository.init();
-    _repository.loadInitialQueue(token: widget.token);
-    _repository.reverbService.connect(authToken: widget.token);
+    _repository.loadInitialQueue(token: token ?? _effectiveToken ?? widget.token);
+    _repository.reverbService.connect(authToken: token ?? _effectiveToken ?? widget.token);
 
-    // Écouter les événements pickup.departed pour mettre à jour la carte en temps réel
+    _departedSubscription?.cancel();
     _departedSubscription =
         _repository.reverbService.departedEvents.listen((event) {
       if (mounted) {
@@ -95,7 +129,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
       }
     });
 
-    // Écouter les nouvelles arrivées pour afficher une notification visuelle discrète
+    _newArrivalSubscription?.cancel();
     _newArrivalSubscription =
         _repository.newArrivalAlerts.listen((event) {
       if (mounted) {
@@ -115,12 +149,6 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
         );
       }
     });
-
-    _loadScheduleStatus();
-    _schedulePollingTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => _loadScheduleStatus(),
-    );
   }
 
   Future<void> _loadScheduleStatus() async {
@@ -138,13 +166,23 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     try {
       const storage = FlutterSecureStorage();
       final token = await storage.read(key: 'auth_token');
+      final sId = await storage.read(key: 'auth_school_id');
       final name = await storage.read(key: 'auth_school_name');
       final logo = await storage.read(key: 'auth_school_logo');
 
+      bool needsReinit = false;
+
       if (mounted) {
         setState(() {
-          if (_effectiveToken == null || _effectiveToken!.isEmpty) {
+          if ((_effectiveToken == null || _effectiveToken!.isEmpty) && token != null && token.isNotEmpty) {
             _effectiveToken = token;
+            needsReinit = true;
+          }
+          if ((_effectiveSchoolId == null || _effectiveSchoolId!.isEmpty || _effectiveSchoolId == 'a3000c08-8f84-4bff-8c3f-81ebf2b014dd') &&
+              sId != null &&
+              sId.isNotEmpty) {
+            _effectiveSchoolId = sId;
+            needsReinit = true;
           }
           if (_schoolName == null || _schoolName!.isEmpty) {
             _schoolName = name;
@@ -153,6 +191,16 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
             _schoolLogo = logo;
           }
         });
+
+        if (needsReinit && widget.repository == null) {
+          _initRepository(
+            schoolId: _effectiveSchoolId ?? 'a308ef34-99df-4f01-ab91-8c3eb47bf72a',
+            token: _effectiveToken,
+          );
+        } else {
+          _repository.loadInitialQueue(token: _effectiveToken ?? widget.token);
+        }
+
         _loadScheduleStatus();
       }
     } catch (_) {}
@@ -160,6 +208,7 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
 
   Future<void> _handleLogout() async {
     final token = _effectiveToken ?? widget.token;
+    AuthSessionMemory.clear();
     try {
       const storage = FlutterSecureStorage();
       await storage.deleteAll();
@@ -176,6 +225,8 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
 
   @override
   void dispose() {
+    _queuePollingTimer?.cancel();
+    _queuePollingTimer = null;
     _schedulePollingTimer?.cancel();
     _schedulePollingTimer = null;
     _departedSubscription?.cancel();
@@ -202,32 +253,41 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     }
 
     return Scaffold(
+      backgroundColor: SortieColors.background,
       appBar: AppBar(
+        backgroundColor: SortieColors.background,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_schoolLogo != null && _schoolLogo!.isNotEmpty)
               Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8.0),
+                padding: const EdgeInsetsDirectional.only(end: 6.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(6),
                   child: Image.network(
                     _schoolLogo!,
-                    width: 28,
-                    height: 28,
+                    width: 22,
+                    height: 22,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 24),
+                    errorBuilder: (_, __, ___) => const Icon(Icons.school_rounded, size: 20, color: SortieColors.primary),
                   ),
                 ),
               )
             else
               const Padding(
-                padding: EdgeInsetsDirectional.only(end: 8.0),
-                child: Icon(Icons.school, size: 24),
+                padding: EdgeInsetsDirectional.only(end: 6.0),
+                child: Icon(Icons.school_rounded, size: 20, color: SortieColors.primary),
               ),
             Flexible(
               child: Text(
                 _schoolName ?? l10n.ecranSurveillanceTitre,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: SortieColors.textPrimary,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -242,20 +302,37 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
             builder: (context, snapshot) {
               final isConnected =
                   snapshot.data ?? _repository.reverbService.isConnected;
-              return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8.0),
+              final bgColor = isConnected ? const Color(0xFFE6F4EA) : const Color(0xFFFEF7E0);
+              final fgColor = isConnected ? const Color(0xFF137333) : const Color(0xFFB06000);
+              return Container(
+                margin: const EdgeInsetsDirectional.only(end: 4.0),
+                padding: const EdgeInsetsDirectional.symmetric(horizontal: 8.0, vertical: 4.0),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(16.0),
+                  border: Border.all(
+                    color: fgColor.withValues(alpha: 0.25),
+                    width: 1,
+                  ),
+                ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isConnected ? Icons.wifi : Icons.wifi_off,
-                      size: 20,
-                      color: isConnected ? Colors.green : Colors.orange,
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: fgColor,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                     const SizedBox(width: 4.0),
                     Text(
                       isConnected ? l10n.enDirect : l10n.reconnexionEnCours,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isConnected ? Colors.green : Colors.orange,
+                      style: TextStyle(
+                        color: fgColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -266,7 +343,9 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
           IconButton(
             key: const Key('surveillance_btn_refresh'),
             tooltip: 'Actualiser',
-            icon: const Icon(Icons.refresh_rounded),
+            iconSize: 20,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.refresh_rounded, color: SortieColors.textSecondary),
             onPressed: () {
               _loadScheduleStatus();
               _repository.loadInitialQueue(token: _effectiveToken ?? widget.token);
@@ -275,7 +354,9 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
           IconButton(
             key: const Key('surveillance_btn_logout'),
             tooltip: l10n.deconnexion,
-            icon: const Icon(Icons.logout_rounded),
+            iconSize: 20,
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.logout_rounded, color: SortieColors.textSecondary),
             onPressed: _handleLogout,
           ),
         ],
@@ -346,10 +427,10 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                     if (state.isResyncing)
                       Container(
                         margin: const EdgeInsetsDirectional.only(bottom: 12.0),
-                        padding: const EdgeInsetsDirectional.all(8.0),
+                        padding: const EdgeInsetsDirectional.symmetric(horizontal: 14.0, vertical: 10.0),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8.0),
+                          color: const Color(0xFFD3E3FD),
+                          borderRadius: BorderRadius.circular(16.0),
                         ),
                         child: Row(
                           children: [
@@ -358,12 +439,13 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                               height: 16,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
-                            const SizedBox(width: 8.0),
+                            const SizedBox(width: 10.0),
                             Text(
                               l10n.miseAJourEnCours,
-                              style: TextStyle(
-                                color: Colors.blue.shade900,
-                                fontSize: 12,
+                              style: const TextStyle(
+                                color: Color(0xFF041E49),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -371,11 +453,50 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
                       ),
                     if (grouped.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.only(top: 48.0),
+                        padding: const EdgeInsetsDirectional.only(top: 48.0, start: 8.0, end: 8.0),
                         child: Center(
-                          child: Text(
-                            l10n.aucunEleveAppele,
-                            style: const TextStyle(fontSize: 16, color: Colors.grey),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsetsDirectional.all(32.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.03),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE6F4EA),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.check_circle_outline_rounded,
+                                    size: 42,
+                                    color: Color(0xFF137333),
+                                  ),
+                                ),
+                                const SizedBox(height: 18.0),
+                                Text(
+                                  l10n.aucunEleveAppele,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: SortieColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       )
@@ -404,36 +525,45 @@ class _SurveillanceScreenState extends State<SurveillanceScreen> {
     final closesAt = _scheduleStatus!.closesAt ?? '';
     final nextOpeningAt = _scheduleStatus!.nextOpeningAt ?? '';
 
-    final bgColor = isOpen ? const Color(0xFFE8F5E9) : const Color(0xFFFFF3E0);
-    final borderColor = isOpen ? Colors.green.shade400 : Colors.amber.shade400;
-    final textColor = isOpen ? Colors.green.shade900 : Colors.brown.shade800;
+    final bgColor = isOpen ? const Color(0xFFE6F4EA) : const Color(0xFFFEF7E0);
+    final borderColor = isOpen ? const Color(0xFFCEEAD6) : const Color(0xFFFEEFC3);
+    final textColor = isOpen ? const Color(0xFF137333) : const Color(0xFFB06000);
+    final iconColor = textColor;
 
     final String text = isOpen
         ? (closesAt.isNotEmpty ? l10n.sortieEnCours(closesAt) : l10n.enDirect)
         : (nextOpeningAt.isNotEmpty ? l10n.sortieCommenceA(nextOpeningAt) : l10n.sortieFermee);
 
     return Container(
-      margin: const EdgeInsetsDirectional.only(bottom: 12.0),
-      padding: const EdgeInsetsDirectional.symmetric(horizontal: 14.0, vertical: 10.0),
+      margin: const EdgeInsetsDirectional.only(bottom: 14.0),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16.0, vertical: 12.0),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(10.0),
+        borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: borderColor, width: 1.5),
       ),
       child: Row(
         children: [
-          Icon(
-            isOpen ? Icons.check_circle_outline : Icons.access_time_rounded,
-            color: textColor,
-            size: 20,
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.8),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isOpen ? Icons.check_circle_rounded : Icons.access_time_filled_rounded,
+              color: iconColor,
+              size: 20,
+            ),
           ),
-          const SizedBox(width: 8.0),
+          const SizedBox(width: 12.0),
           Expanded(
             child: Text(
               text,
               style: TextStyle(
                 color: textColor,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
                 fontSize: 14,
               ),
             ),
