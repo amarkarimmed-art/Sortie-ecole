@@ -18,6 +18,7 @@ use App\Services\Schedule\PickupScheduleService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -165,8 +166,12 @@ class ArrivalController extends BaseController
                     $proximityState,
                     $now->toIso8601String()
                 ))->toOthers();
-            } catch (\Throwable) {
-                // Ignore broadcast failure
+            } catch (\Throwable $e) {
+                Log::warning('Échec de la diffusion WebSocket pour le parent en approche.', [
+                    'school_id' => $schoolId,
+                    'user_id' => (string) $user->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
         }
 

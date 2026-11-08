@@ -20,6 +20,9 @@ use Laravel\Sanctum\Sanctum;
  *
  * Couvre l'intégralité des critères d'acceptation CA1 à CA10.
  * Conforme à la loi 09-08, multi-tenant hermétique, et fuseau Africa/Casablanca.
+ *
+ * Toutes les requêtes envoient les coordonnées GPS (pos_lat / pos_lng) ;
+ * le calcul Haversine est effectué côté serveur.
  */
 beforeEach(function () {
     // Configurer explicitement le fuseau marocain pour chaque test
@@ -30,13 +33,28 @@ afterEach(function () {
     Carbon::setTestNow(); // Réinitialiser le temps après chaque test
 });
 
+// --- Coordonnées de test ---
+// Portail de l'école (Casablanca)
+const GATE_LAT = 33.5731;
+const GATE_LNG = -7.5898;
+// Position du parent dans le périmètre (~30 m du portail)
+const PARENT_NEAR_LAT = 33.5733;
+const PARENT_NEAR_LNG = -7.5896;
+// Position du parent hors périmètre (~2 km du portail)
+const PARENT_FAR_LAT = 33.5900;
+const PARENT_FAR_LNG = -7.5700;
+
 /*
 |--------------------------------------------------------------------------
 | CA1 : Signalement nominal dans la fenêtre et dans le rayon autorisé
 |--------------------------------------------------------------------------
 */
 test('CA1 : Un parent dans le rayon pendant la fenêtre horaire signale son arrivée avec succès', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
     $parent->children()->attach($child->id, ['relationship' => 'parent']);
@@ -61,11 +79,10 @@ test('CA1 : Un parent dans le rayon pendant la fenêtre horaire signale son arri
     $response = $this->withHeader('Idempotency-Key', $idempotencyKey)
         ->postJson("/api/v1/schools/{$school->id}/arrivals", [
             'child_ids' => [$child->id],
-            'in_radius' => true,
-            'distance_meters' => 30,
+            'pos_lat' => PARENT_NEAR_LAT,
+            'pos_lng' => PARENT_NEAR_LNG,
         ]);
 
-    // Doit échouer en rouge avec 501 tant que la logique métier n'est pas implémentée
     $response->assertStatus(201);
     $response->assertJsonPath('in_radius', true);
     $response->assertJsonPath('pickup_requests.0.status', PickupRequest::STATUS_REQUESTED);
@@ -78,7 +95,11 @@ test('CA1 : Un parent dans le rayon pendant la fenêtre horaire signale son arri
 |--------------------------------------------------------------------------
 */
 test('CA2 : Le signalement hors fenêtre horaire est rejeté avec une erreur 422', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
     $parent->children()->attach($child->id, ['relationship' => 'parent']);
@@ -99,11 +120,10 @@ test('CA2 : Le signalement hors fenêtre horaire est rejeté avec une erreur 422
 
     $response = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
         'child_ids' => [$child->id],
-        'in_radius' => true,
-        'distance_meters' => 20,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ]);
 
-    // Échoue en rouge (attend 422, reçoit 501)
     $response->assertStatus(422);
 });
 
@@ -113,7 +133,11 @@ test('CA2 : Le signalement hors fenêtre horaire est rejeté avec une erreur 422
 |--------------------------------------------------------------------------
 */
 test('CA3 : La fenêtre horaire spécifique au Ramadan est respectée avec le fuseau Africa/Casablanca', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
     $parent->children()->attach($child->id, ['relationship' => 'parent']);
@@ -136,8 +160,7 @@ test('CA3 : La fenêtre horaire spécifique au Ramadan est respectée avec le fu
         'is_ramadan' => true,
     ]);
 
-    // Simuler un mardi pendant le Ramadan (ex: Mars 2026, passage à l'heure de Ramadan)
-    // À 14h30 en heure locale de Casablanca, le signalement Ramadan doit être accepté
+    // Simuler un mardi pendant le Ramadan
     $ramadanTime = Carbon::create(2026, 3, 10, 14, 30, 0, 'Africa/Casablanca');
     Carbon::setTestNow($ramadanTime);
 
@@ -145,21 +168,24 @@ test('CA3 : La fenêtre horaire spécifique au Ramadan est respectée avec le fu
 
     $response = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
         'child_ids' => [$child->id],
-        'in_radius' => true,
-        'distance_meters' => 10,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ]);
 
-    // Échoue en rouge (attend 201, reçoit 501)
     $response->assertStatus(201);
 });
 
 /*
 |--------------------------------------------------------------------------
-| CA4 : Signalement hors rayon autorisé (> 300m)
+| CA4 : Signalement hors rayon autorisé (> périmètre)
 |--------------------------------------------------------------------------
 */
-test('CA4 : Un signalement hors rayon place la demande en attente de confirmation manuelle', function () {
-    $school = School::factory()->create();
+test('CA4 : Un signalement hors rayon est rejeté avec une erreur 422', function () {
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 50,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
     $parent->children()->attach($child->id, ['relationship' => 'parent']);
@@ -177,15 +203,12 @@ test('CA4 : Un signalement hors rayon place la demande en attente de confirmatio
 
     $response = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
         'child_ids' => [$child->id],
-        'in_radius' => false,
-        'distance_meters' => 450, // Hors rayon (450m)
+        'pos_lat' => PARENT_FAR_LAT,
+        'pos_lng' => PARENT_FAR_LNG,
     ]);
 
-    // Échoue en rouge (attend 201 avec statut pending_agent_confirmation, reçoit 501)
-    $response->assertStatus(201);
-    $response->assertJsonPath('in_radius', false);
-    $response->assertJsonPath('distance_meters', 450);
-    $response->assertJsonPath('pickup_requests.0.status', PickupRequest::STATUS_PENDING_AGENT_CONFIRMATION);
+    // Hors du rayon → 422 (calcul Haversine côté serveur)
+    $response->assertStatus(422);
 });
 
 /*
@@ -194,7 +217,11 @@ test('CA4 : Un signalement hors rayon place la demande en attente de confirmatio
 |--------------------------------------------------------------------------
 */
 test('CA5 : Deux requêtes successives avec la même Idempotency-Key ne créent aucun doublon', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
     $parent->children()->attach($child->id, ['relationship' => 'parent']);
@@ -214,8 +241,8 @@ test('CA5 : Deux requêtes successives avec la même Idempotency-Key ne créent 
 
     $payload = [
         'child_ids' => [$child->id],
-        'in_radius' => true,
-        'distance_meters' => 30,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ];
 
     // Premier envoi
@@ -226,7 +253,6 @@ test('CA5 : Deux requêtes successives avec la même Idempotency-Key ne créent 
     $secondResponse = $this->withHeader('Idempotency-Key', $key)
         ->postJson("/api/v1/schools/{$school->id}/arrivals", $payload);
 
-    // Échoue en rouge (reçoit 501)
     $firstResponse->assertStatus(201);
     $secondResponse->assertStatus(201);
     expect($secondResponse->json('id'))->toBe($firstResponse->json('id'));
@@ -238,7 +264,11 @@ test('CA5 : Deux requêtes successives avec la même Idempotency-Key ne créent 
 |--------------------------------------------------------------------------
 */
 test('CA6 : Un parent avec fratrie crée une arrivée unique regroupant plusieurs demandes de sortie', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
 
     $child1 = Child::factory()->create(['school_id' => $school->id, 'first_name' => 'Adam']);
@@ -259,11 +289,10 @@ test('CA6 : Un parent avec fratrie crée une arrivée unique regroupant plusieur
 
     $response = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
         'child_ids' => [$child1->id, $child2->id],
-        'in_radius' => true,
-        'distance_meters' => 20,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ]);
 
-    // Échoue en rouge (attend 201 avec 2 demandes associées, reçoit 501)
     $response->assertStatus(201);
     $response->assertJsonCount(2, 'pickup_requests');
 });
@@ -274,7 +303,11 @@ test('CA6 : Un parent avec fratrie crée une arrivée unique regroupant plusieur
 |--------------------------------------------------------------------------
 */
 test('CA7 : Un parent ne peut pas signaler son arrivée pour un élève non rattaché', function () {
-    $school = School::factory()->create();
+    $school = School::factory()->create([
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
 
     // Enfant appartenant à la même école mais non rattaché à ce parent
@@ -293,8 +326,8 @@ test('CA7 : Un parent ne peut pas signaler son arrivée pour un élève non ratt
 
     $response = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
         'child_ids' => [$otherChild->id],
-        'in_radius' => true,
-        'distance_meters' => 20,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ]);
 
     // Doit être rejeté (422 Unprocessable ou 404)
@@ -307,7 +340,12 @@ test('CA7 : Un parent ne peut pas signaler son arrivée pour un élève non ratt
 |--------------------------------------------------------------------------
 */
 test('CA8 : Une tentative de signalement pour une autre école retourne impérativement 404', function () {
-    $schoolA = School::factory()->create(['name' => 'École A']);
+    $schoolA = School::factory()->create([
+        'name' => 'École A',
+        'gate_latitude' => GATE_LAT,
+        'gate_longitude' => GATE_LNG,
+        'perimeter_radius' => 100,
+    ]);
     $schoolB = School::factory()->create(['name' => 'École B']);
 
     $parentA = User::factory()->create(['school_id' => $schoolA->id, 'role' => 'parent']);
@@ -321,12 +359,11 @@ test('CA8 : Une tentative de signalement pour une autre école retourne impérat
     // Tentative d'appeler l'endpoint de l'école B
     $response = $this->postJson("/api/v1/schools/{$schoolB->id}/arrivals", [
         'child_ids' => [$childA->id],
-        'in_radius' => true,
-        'distance_meters' => 10,
+        'pos_lat' => PARENT_NEAR_LAT,
+        'pos_lng' => PARENT_NEAR_LNG,
     ]);
 
     // ADR 0005 : Retourne 404 Not Found (et JAMAIS 403 pour éviter l'énumération)
-    // Échoue en rouge car reçoit 501
     $response->assertStatus(404);
 });
 
@@ -374,7 +411,6 @@ test('CA10 : Un parent peut consulter le statut de sa dernière arrivée', funct
 
     $response = $this->getJson("/api/v1/schools/{$school->id}/arrivals/status");
 
-    // Doit échouer en rouge avec 501 tant que l'action n'est pas codée
     $response->assertStatus(200);
     $response->assertJsonStructure([
         'arrival',

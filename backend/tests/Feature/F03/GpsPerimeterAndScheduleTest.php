@@ -331,6 +331,11 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
     ]);
     $resStart->assertStatus(201);
 
+    // Marquer comme remis pour permettre de tester la limite de fin de plage sans conflit de demande en attente
+    PickupRequest::withoutGlobalScopes()->where('child_id', $child->id)->update([
+        'status' => PickupRequest::STATUS_HANDED_OVER,
+    ]);
+
     // EXACTEMENT à la fin (16:30:00) -> Accepté 201
     $timeEnd = Carbon::create(2026, 10, 5, 16, 30, 0, 'Africa/Casablanca');
     Carbon::setTestNow($timeEnd);
@@ -355,6 +360,11 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
     ]);
     $resAfter->assertStatus(422);
 
+    // Marquer comme remis pour la phase Ramadan
+    PickupRequest::withoutGlobalScopes()->where('child_id', $child->id)->update([
+        'status' => PickupRequest::STATUS_HANDED_OVER,
+    ]);
+
     // 5c. Mode Ramadan actif
     $school->update(['is_ramadan_mode' => true]);
     PickupWindow::factory()->create([
@@ -376,6 +386,11 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
         'captured_at' => $timeRamadan->toIso8601String(),
     ]);
     $resRamadan->assertStatus(201);
+
+    // Marquer comme remis pour la phase débrayage
+    PickupRequest::withoutGlobalScopes()->where('child_id', $child->id)->update([
+        'status' => PickupRequest::STATUS_HANDED_OVER,
+    ]);
 
     // À 16:15 -> La plage normale est ignorée car is_ramadan_mode = true -> Refusé 422
     $timeNormalDuringRamadan = Carbon::create(2026, 10, 5, 16, 15, 0, 'Africa/Casablanca');
@@ -463,12 +478,10 @@ test('6. Double signalement du même parent pour le même enfant dans la même p
     $firstResponse->assertStatus(201);
     $firstArrivalId = $firstResponse->json('id');
 
-    // Deuxième signalement sans Idempotency-Key
+    // Deuxième signalement sans Idempotency-Key : bloqué 409 car la demande est en attente
     $secondResponse = $this->postJson("/api/v1/schools/{$school->id}/arrivals", $payload);
-    $secondResponse->assertStatus(201);
-    $secondArrivalId = $secondResponse->json('id');
-
-    expect($secondArrivalId)->toBe($firstArrivalId);
+    $secondResponse->assertStatus(409);
+    $secondResponse->assertJsonStructure(['message', 'message_fr', 'message_ar', 'pending_children']);
 
     // Justifié : lecture restreinte au school_id de l'école
     $totalArrivals = Arrival::withoutGlobalScopes()->where('user_id', $parent->id)->count();

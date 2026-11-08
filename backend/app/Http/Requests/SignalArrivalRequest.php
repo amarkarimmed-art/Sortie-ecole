@@ -12,9 +12,11 @@ use Illuminate\Foundation\Http\FormRequest;
  *
  * Règles :
  * - child_ids : tableau d'UUIDs non vide
- * - in_radius : booléen requis
- * - distance_meters : entier positif ou nul (nullable)
- * - Zéro coordonnée GPS (lat/lng) admise (Loi 09-08)
+ * - pos_lat / pos_lng : coordonnées GPS obligatoires (calcul Haversine côté serveur)
+ * - accuracy_meters : précision GPS (optionnelle)
+ * - captured_at : horodatage de la mesure (optionnel)
+ *
+ * Loi 09-08 : les coordonnées ne sont jamais persistées en base.
  */
 class SignalArrivalRequest extends FormRequest
 {
@@ -45,12 +47,10 @@ class SignalArrivalRequest extends FormRequest
         return [
             'child_ids' => ['required', 'array', 'min:1'],
             'child_ids.*' => ['required', 'uuid'],
-            'in_radius' => ['nullable', 'boolean'],
-            'distance_meters' => ['nullable', 'integer', 'min:0'],
-            'pos_lat' => ['nullable', 'numeric'],
-            'pos_lng' => ['nullable', 'numeric'],
-            'lat' => ['nullable', 'numeric'],
-            'lng' => ['nullable', 'numeric'],
+            'pos_lat' => ['required_without:lat', 'nullable', 'numeric'],
+            'pos_lng' => ['required_without:lng', 'nullable', 'numeric'],
+            'lat' => ['required_without:pos_lat', 'nullable', 'numeric'],
+            'lng' => ['required_without:pos_lng', 'nullable', 'numeric'],
             'accuracy_meters' => ['nullable', 'numeric'],
             'accuracy' => ['nullable', 'numeric'],
             'captured_at' => ['nullable'],

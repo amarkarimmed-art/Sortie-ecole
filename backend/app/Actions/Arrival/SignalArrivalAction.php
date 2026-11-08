@@ -18,6 +18,7 @@ use App\Services\Schedule\PickupScheduleService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -27,12 +28,20 @@ use Illuminate\Support\Str;
  * - Gestion de l'idempotence et anti-doublon par créneau
  * - Validation stricte des fenêtres horaires sur le fuseau 'Africa/Casablanca'
  * - Vérification des liens de parenté (parent ↔ enfants)
- * - Contrôle de proximité GPS (Haversine) sans stockage des coordonnées
+ * - Contrôle de proximité GPS (Haversine) côté serveur, sans mode legacy
+ * - Blocage 409 si une demande est encore en attente pour le jour en cours
  * - Création transactionnelle de l'arrivée et diffusion WebSocket Reverb
  * - Isolation multi-école stricte (ADR 0005)
  */
 class SignalArrivalAction extends BaseAction
 {
+    /** Statuts terminaux — une demande dans l'un de ces états ne bloque pas une nouvelle demande. */
+    private const TERMINAL_STATUSES = [
+        PickupRequest::STATUS_HANDED_OVER,
+        PickupRequest::STATUS_CANCELLED,
+        PickupRequest::STATUS_EXPIRED,
+    ];
+
     public function __construct(
         private readonly ArrivalRepositoryInterface $arrivalRepository,
         private readonly PickupRequestRepositoryInterface $pickupRequestRepository,
@@ -91,108 +100,101 @@ class SignalArrivalAction extends BaseAction
             abort(422, 'Le signalement d\'arrivée est hors de la fenêtre horaire autorisée.');
         }
 
-        // 5. Anti-doublon par plage horaire active du jour
-        // Bornes du jour en heure de Casablanca, converties en UTC pour la requête
-        $startOfDayCasa = $now->copy()->startOfDay()->utc();
-        $endOfDayCasa = $now->copy()->endOfDay()->utc();
-        // Justifié : déduplication restreinte au school_id et user_id
-        $existingArrival = Arrival::withoutGlobalScopes()
-            ->where('school_id', $schoolId)
-            ->where('user_id', $user->id)
-            ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
-            ->whereHas('pickupRequests', function ($q) use ($childIds) {
-                $q->whereIn('child_id', $childIds)
-                    ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED]);
-            })
-            ->latest()
-            ->first();
+        // 5. Évaluation GPS côté serveur — les coordonnées du parent sont obligatoires
+        $hasCoords = (isset($data['pos_lat']) || isset($data['lat']))
+            && (isset($data['pos_lng']) || isset($data['lng']));
 
-        if ($existingArrival) {
-            $loaded = $existingArrival->load(['pickupRequests.child']);
-            $childrenPayload = [];
-            foreach ($loaded->pickupRequests as $pickupReq) {
-                $child = $pickupReq->child;
-                $childrenPayload[] = [
-                    'id' => $pickupReq->child_id,
-                    'first_name' => $child?->first_name,
-                    'last_name' => $child?->last_name,
-                    'class_name' => $child?->class_name,
-                    'request_id' => $pickupReq->id,
-                ];
-            }
-            try {
-                broadcast(new ArrivalSignaledEvent(
-                    $loaded,
-                    (string) $user->name,
-                    $childrenPayload,
-                    $liveDistance,
-                    $proximityState,
-                    $now->toIso8601String()
-                ))->toOthers();
-            } catch (\Throwable) {
-            }
-
-            return $loaded;
+        if (! $hasCoords) {
+            abort(422, 'Les coordonnées GPS sont obligatoires pour signaler votre arrivée.');
         }
 
-        // 6. Évaluation GPS (si coordonnées fournies ou portail configuré en mode GPS)
-        $hasCoords = (isset($data['pos_lat']) || isset($data['lat'])) && (isset($data['pos_lng']) || isset($data['lng']));
+        $radius = (int) ($school->perimeter_radius ?? 50);
         $liveDistance = null;
         $inRadius = true;
         $proximityState = 'in_perimeter';
-        $radius = (int) ($school->perimeter_radius ?? 50);
 
-        if ($hasCoords) {
-            // Précision GPS
-            $accuracy = $data['accuracy_meters'] ?? $data['accuracy'] ?? null;
-            if ($accuracy !== null && (float) $accuracy > 50.0) {
-                abort(422, 'Précision GPS insuffisante, veuillez réessayer.');
+        // Précision GPS
+        $accuracy = $data['accuracy_meters'] ?? $data['accuracy'] ?? null;
+        if ($accuracy !== null && (float) $accuracy > 50.0) {
+            abort(422, 'Précision GPS insuffisante, veuillez réessayer.');
+        }
+
+        // Fraîcheur de la mesure (<= 60 secondes)
+        $capturedAt = $data['captured_at'] ?? $data['timestamp'] ?? null;
+        if ($capturedAt !== null) {
+            if (is_numeric($capturedAt)) {
+                $capturedCarbon = (strlen((string) $capturedAt) > 10)
+                    ? Carbon::createFromTimestampMs((int) $capturedAt, 'Africa/Casablanca')
+                    : Carbon::createFromTimestamp((int) $capturedAt, 'Africa/Casablanca');
+            } else {
+                $capturedCarbon = Carbon::parse((string) $capturedAt, 'Africa/Casablanca');
             }
 
-            // Fraîcheur de la mesure (<= 60 secondes)
-            $capturedAt = $data['captured_at'] ?? $data['timestamp'] ?? null;
-            if ($capturedAt !== null) {
-                if (is_numeric($capturedAt)) {
-                    $capturedCarbon = (strlen((string) $capturedAt) > 10)
-                        ? Carbon::createFromTimestampMs((int) $capturedAt, 'Africa/Casablanca')
-                        : Carbon::createFromTimestamp((int) $capturedAt, 'Africa/Casablanca');
-                } else {
-                    $capturedCarbon = Carbon::parse((string) $capturedAt, 'Africa/Casablanca');
-                }
-
-                if (abs($now->diffInSeconds($capturedCarbon)) > 60) {
-                    abort(422, 'Position GPS trop ancienne, veuillez réessayer.');
-                }
+            if (abs($now->diffInSeconds($capturedCarbon)) > 60) {
+                abort(422, 'Position GPS trop ancienne, veuillez réessayer.');
             }
+        }
 
-            // Calcul distance Haversine
-            if ($school->gate_latitude !== null && $school->gate_longitude !== null) {
-                $cLat = (float) ($data['pos_lat'] ?? $data['lat']);
-                $cLng = (float) ($data['pos_lng'] ?? $data['lng']);
-                $liveDistance = $this->haversine->calculateDistance(
-                    $cLat,
-                    $cLng,
-                    (float) $school->gate_latitude,
-                    (float) $school->gate_longitude
-                );
+        // Calcul distance Haversine côté serveur
+        if ($school->gate_latitude !== null && $school->gate_longitude !== null) {
+            $cLat = (float) ($data['pos_lat'] ?? $data['lat']);
+            $cLng = (float) ($data['pos_lng'] ?? $data['lng']);
+            $liveDistance = $this->haversine->calculateDistance(
+                $cLat,
+                $cLng,
+                (float) $school->gate_latitude,
+                (float) $school->gate_longitude
+            );
 
-                if ($liveDistance > $radius) {
-                    abort(422, "Vous êtes à {$liveDistance} mètres de l'école (limite : {$radius} m)");
-                }
+            if ($liveDistance > $radius) {
+                abort(422, "Vous êtes à {$liveDistance} mètres de l'école (limite : {$radius} m)");
             }
+        }
 
-            // Loi 09-08 : Zéro stockage de position ni de distance GPS en base
-            $inRadius = true;
-            $proximityState = 'in_perimeter';
-        } else {
-            // Mode legacy (tests F03 sans coordonnées directes)
-            if (isset($data['in_radius'])) {
-                $inRadius = (bool) $data['in_radius'];
-            }
-            if (isset($data['distance_meters'])) {
-                $liveDistance = (int) $data['distance_meters'];
-            }
-            $proximityState = $inRadius ? 'in_perimeter' : 'out_of_zone';
+        // Loi 09-08 : Zéro stockage de position ni de distance GPS en base
+        $inRadius = true;
+        $proximityState = 'in_perimeter';
+
+        // 6. Anti-doublon par plage horaire active du jour
+        // Bornes du jour en heure de Casablanca, converties en UTC pour la requête
+        $startOfDayCasa = $now->copy()->startOfDay()->utc();
+        $endOfDayCasa = $now->copy()->endOfDay()->utc();
+
+        // Chercher toutes les demandes actives (non terminales) pour les enfants demandés aujourd'hui
+        // Justifié : déduplication restreinte au school_id et user_id
+        $pendingRequests = PickupRequest::withoutGlobalScopes()
+            ->where('school_id', $schoolId)
+            ->where('requested_by', $user->id)
+            ->whereIn('child_id', $childIds)
+            ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
+            ->whereNotIn('status', self::TERMINAL_STATUSES)
+            ->with('child')
+            ->get();
+
+        if ($pendingRequests->isNotEmpty()) {
+            // Construire la liste des enfants bloquants pour un message clair
+            $childNames = $pendingRequests
+                ->map(fn (PickupRequest $pr) => trim("{$pr->child?->first_name} {$pr->child?->last_name}"))
+                ->unique()
+                ->values()
+                ->implode(', ');
+
+            $messageFr = "Une demande est déjà en cours pour : {$childNames}. "
+                . 'Veuillez attendre que la remise soit effectuée avant de signaler une nouvelle arrivée.';
+            $messageAr = "طلب قيد المعالجة بالفعل لـ: {$childNames}. "
+                . 'يرجى الانتظار حتى يتم تسليم التلميذ قبل الإشارة إلى وصول جديد.';
+
+            abort(response()->json([
+                'message' => $messageFr,
+                'message_fr' => $messageFr,
+                'message_ar' => $messageAr,
+                'pending_children' => $pendingRequests->map(fn (PickupRequest $pr) => [
+                    'child_id' => $pr->child_id,
+                    'child_name' => trim("{$pr->child?->first_name} {$pr->child?->last_name}"),
+                    'status' => $pr->status,
+                    'request_id' => $pr->id,
+                ])->values()->all(),
+            ], 409));
         }
 
         // 7. Création transactionnelle de l'arrivée et des demandes individuelles
@@ -205,24 +207,16 @@ class SignalArrivalAction extends BaseAction
             $proximityState,
             $liveDistance,
             $now,
-            $hasCoords,
-            $data
         ) {
-            // En mode GPS, distance_meters reste strictement null en base (Loi 09-08)
-            $dbDistance = $hasCoords ? null : ($data['distance_meters'] ?? null);
-
+            // Loi 09-08 : distance_meters reste strictement null en base
             $arrival = $this->arrivalRepository->create([
                 'school_id' => $schoolId,
                 'user_id' => $user->id,
                 'in_radius' => $inRadius,
-                'distance_meters' => $dbDistance,
+                'distance_meters' => null,
                 'proximity_state' => $proximityState,
                 'idempotency_key' => $idempotencyKey,
             ]);
-
-            $initialStatus = $inRadius
-                ? PickupRequest::STATUS_REQUESTED
-                : PickupRequest::STATUS_PENDING_AGENT_CONFIRMATION;
 
             $childrenPayload = [];
             foreach ($childIds as $childId) {
@@ -231,9 +225,9 @@ class SignalArrivalAction extends BaseAction
                     'arrival_id' => $arrival->id,
                     'child_id' => $childId,
                     'requested_by' => $user->id,
-                    'status' => $initialStatus,
+                    'status' => PickupRequest::STATUS_REQUESTED,
                     'in_radius' => $inRadius,
-                    'distance_meters' => $dbDistance,
+                    'distance_meters' => null,
                     'proximity_state' => $proximityState,
                     'idempotency_key' => (string) Str::uuid(),
                 ]);
@@ -258,8 +252,12 @@ class SignalArrivalAction extends BaseAction
                     $proximityState,
                     $now->toIso8601String()
                 ))->toOthers();
-            } catch (\Throwable) {
-                // Le broadcast ne bloque pas la réponse HTTP
+            } catch (\Throwable $e) {
+                Log::warning('Échec de la diffusion WebSocket pour l\'arrivée.', [
+                    'arrival_id' => (string) $arrival->id,
+                    'school_id' => $schoolId,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             return $arrival->load(['pickupRequests.child']);

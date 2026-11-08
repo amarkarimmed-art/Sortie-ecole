@@ -223,20 +223,14 @@ components:
             format: uuid
           minItems: 1
           description: Identifiants des élèves concernés (fratrie)
-        in_radius:
-          type: boolean
-          description: Le parent est-il dans le rayon autorisé (calculé ou forcé)
-        distance_meters:
-          type: ["integer", "null"]
-          description: Non renseigné en mode GPS (Loi 09-08)
         pos_lat:
           type: number
           format: float
-          description: Coordonnée GPS pour évaluation temps réel (jamais stockée)
+          description: Coordonnée GPS (latitude) pour évaluation temps réel (jamais stockée)
         pos_lng:
           type: number
           format: float
-          description: Coordonnée GPS pour évaluation temps réel (jamais stockée)
+          description: Coordonnée GPS (longitude) pour évaluation temps réel (jamais stockée)
         accuracy_meters:
           type: number
           format: float
@@ -245,7 +239,12 @@ components:
           type: string
           format: date-time
           description: Horodatage de la capture GPS (<= 60s d'ancienneté)
-      required: [child_ids]
+      required:
+        - child_ids
+        - pos_lat
+        - pos_lng
+        - accuracy_meters
+        - captured_at
 
     ScheduleStatus:
       type: object
@@ -398,12 +397,49 @@ components:
       type: object
       properties:
         arrival:
-          $ref: '#/components/schemas/ArrivalResponse'
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ArrivalResponse'
+          description: Dernière arrivée enregistrée (peut être nulle)
+        arrivals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArrivalResponse'
+          description: Liste de toutes les arrivées du jour pour ce parent
         pickup_requests:
           type: array
           items:
             $ref: '#/components/schemas/PickupRequestSummary'
-      required: [arrival, pickup_requests]
+          description: Liste de toutes les demandes du jour pour ce parent
+      required: [pickup_requests]
+
+    ArrivalConflictError:
+      type: object
+      description: Erreur 409 lorsqu'une demande est déjà en cours pour un enfant
+      properties:
+        message:
+          type: string
+        message_fr:
+          type: string
+        message_ar:
+          type: string
+        pending_children:
+          type: array
+          items:
+            type: object
+            properties:
+              child_id:
+                type: string
+                format: uuid
+              child_name:
+                type: string
+              status:
+                type: string
+              request_id:
+                type: string
+                format: uuid
+            required: [child_id, child_name, status, request_id]
+      required: [message, message_fr, message_ar, pending_children]
 
     PickupActionResponse:
       type: object
@@ -915,6 +951,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: Demande déjà en cours pour un ou plusieurs élèves
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArrivalConflictError'
         '422':
           description: Hors fenêtre horaire ou validation invalide
           content:

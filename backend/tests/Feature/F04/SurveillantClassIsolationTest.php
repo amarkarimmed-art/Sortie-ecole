@@ -210,8 +210,8 @@ test('Flux complet arrivée -> depart avec request_id ou multi-clés et double-c
     $arrivalRes = $this->withHeader('Idempotency-Key', (string) Str::uuid())
         ->postJson("/api/v1/schools/{$school->id}/arrivals", [
             'child_ids' => [$child->id],
-            'in_radius' => true,
-            'distance_meters' => 30,
+            'pos_lat' => $school->gate_latitude ?? 33.5731,
+            'pos_lng' => $school->gate_longitude ?? -7.5898,
         ]);
     $arrivalRes->assertStatus(201);
     $arrivalId = $arrivalRes->json('id');
