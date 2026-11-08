@@ -92,11 +92,14 @@ class SignalArrivalAction extends BaseAction
         }
 
         // 5. Anti-doublon par plage horaire active du jour
+        // Bornes du jour en heure de Casablanca, converties en UTC pour la requête
+        $startOfDayCasa = $now->copy()->startOfDay()->utc();
+        $endOfDayCasa = $now->copy()->endOfDay()->utc();
         // Justifié : déduplication restreinte au school_id et user_id
         $existingArrival = Arrival::withoutGlobalScopes()
             ->where('school_id', $schoolId)
             ->where('user_id', $user->id)
-            ->whereDate('created_at', $now->toDateString())
+            ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
             ->whereHas('pickupRequests', function ($q) use ($childIds) {
                 $q->whereIn('child_id', $childIds)
                     ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED]);

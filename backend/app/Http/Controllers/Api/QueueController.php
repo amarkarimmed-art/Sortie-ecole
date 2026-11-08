@@ -114,11 +114,13 @@ class QueueController extends BaseController
             ->first();
 
         if (! $pickupRequest) {
-            $today = Carbon::now('Africa/Casablanca')->toDateString();
+            $nowCasa = Carbon::now('Africa/Casablanca');
+            $startOfDayCasa = $nowCasa->copy()->startOfDay()->utc();
+            $endOfDayCasa = $nowCasa->copy()->endOfDay()->utc();
             // Justifié : Recherche de secours par arrival_id, child_id ou requested_by
             $pickupRequest = PickupRequest::withoutGlobalScopes()
                 ->where('school_id', $school->id)
-                ->whereDate('created_at', $today)
+                ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
                 ->where(function ($q) use ($requestId) {
                     $q->where('arrival_id', $requestId)
                         ->orWhere('child_id', $requestId)
@@ -303,11 +305,13 @@ class QueueController extends BaseController
 
         // 2. Si non trouvé par id, cherche la demande active du jour dans cette école par where('arrival_id', $requestId) OU where('child_id', $requestId) OU where('requested_by', $requestId) (latest('created_at')->first()).
         if (! $pickupRequest) {
-            $today = Carbon::now('Africa/Casablanca')->toDateString();
+            $nowCasa = Carbon::now('Africa/Casablanca');
+            $startOfDayCasa = $nowCasa->copy()->startOfDay()->utc();
+            $endOfDayCasa = $nowCasa->copy()->endOfDay()->utc();
             // Justifié : recherche de secours multi-clé par arrival_id, child_id ou requested_by
             $pickupRequest = PickupRequest::withoutGlobalScopes()
                 ->where('school_id', $school->id)
-                ->whereDate('created_at', $today)
+                ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
                 ->where(function ($q) use ($requestId) {
                     $q->where('arrival_id', $requestId)
                         ->orWhere('child_id', $requestId)
@@ -341,12 +345,14 @@ class QueueController extends BaseController
             }
 
             if ($child) {
-                $today = Carbon::now('Africa/Casablanca')->toDateString();
+                $nowCasa = Carbon::now('Africa/Casablanca');
+                $startOfDayCasa = $nowCasa->copy()->startOfDay()->utc();
+                $endOfDayCasa = $nowCasa->copy()->endOfDay()->utc();
                 // Justifié : recherche de l'arrivée du jour pour la création à la volée
                 $arrival = Arrival::withoutGlobalScopes()
                     ->where('school_id', $school->id)
                     ->when($parentUser, fn ($q) => $q->where('user_id', $parentUser->id))
-                    ->whereDate('created_at', $today)
+                    ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
                     ->latest('created_at')
                     ->first();
 

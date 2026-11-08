@@ -112,14 +112,15 @@ class ArrivalController extends BaseController
 
         // 6. Diffusion Reverb si 'approaching' ou 'in_perimeter'
         if (in_array($proximityState, ['approaching', 'in_perimeter'], true)) {
-            $today = $now->toDateString();
+            $startOfDayCasa = $now->copy()->startOfDay()->utc();
+            $endOfDayCasa = $now->copy()->endOfDay()->utc();
             $childrenModels = $user->children()->get();
 
             // Justifié : recherche d'une arrivée active du jour pour le parent
             $arrival = Arrival::withoutGlobalScopes()
                 ->where('school_id', $schoolId)
                 ->where('user_id', $user->id)
-                ->whereDate('created_at', $today)
+                ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
                 ->latest('created_at')
                 ->first();
 
@@ -140,7 +141,7 @@ class ArrivalController extends BaseController
                 $pickupReq = PickupRequest::withoutGlobalScopes()
                     ->where('school_id', $schoolId)
                     ->where('child_id', $child->id)
-                    ->whereDate('created_at', $today)
+                    ->whereBetween('created_at', [$startOfDayCasa, $endOfDayCasa])
                     ->whereNotIn('status', [PickupRequest::STATUS_CANCELLED, PickupRequest::STATUS_EXPIRED, PickupRequest::STATUS_HANDED_OVER])
                     ->latest('created_at')
                     ->first();
