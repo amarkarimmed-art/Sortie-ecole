@@ -291,7 +291,8 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
     ]);
     $parent = User::factory()->create(['school_id' => $school->id, 'role' => 'parent']);
     $child = Child::factory()->create(['school_id' => $school->id]);
-    $parent->children()->attach($child->id, ['relationship' => 'parent']);
+    $child2 = Child::factory()->create(['school_id' => $school->id]);
+    $parent->children()->attach([$child->id, $child2->id], ['relationship' => 'parent']);
 
     PickupWindow::factory()->create([
         'school_id' => $school->id,
@@ -331,16 +332,11 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
     ]);
     $resStart->assertStatus(201);
 
-    // Marquer comme remis pour permettre de tester la limite de fin de plage sans conflit de demande en attente
-    PickupRequest::withoutGlobalScopes()->where('child_id', $child->id)->update([
-        'status' => PickupRequest::STATUS_HANDED_OVER,
-    ]);
-
-    // EXACTEMENT à la fin (16:30:00) -> Accepté 201
+    // EXACTEMENT à la fin (16:30:00) -> Accepté 201 avec le second enfant sans demande en cours
     $timeEnd = Carbon::create(2026, 10, 5, 16, 30, 0, 'Africa/Casablanca');
     Carbon::setTestNow($timeEnd);
     $resEnd = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
-        'child_ids' => [$child->id],
+        'child_ids' => [$child2->id],
         'pos_lat' => $latOk,
         'pos_lng' => -7.589843,
         'accuracy_meters' => 10,
@@ -352,7 +348,7 @@ test('5. Horaires en fuseau Africa/Casablanca : limites exactes, marge d\'ouvert
     $timeAfter = Carbon::create(2026, 10, 5, 16, 30, 1, 'Africa/Casablanca');
     Carbon::setTestNow($timeAfter);
     $resAfter = $this->postJson("/api/v1/schools/{$school->id}/arrivals", [
-        'child_ids' => [$child->id],
+        'child_ids' => [$child2->id],
         'pos_lat' => $latOk,
         'pos_lng' => -7.589843,
         'accuracy_meters' => 10,
