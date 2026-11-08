@@ -889,3 +889,52 @@ test('21. Plage traversant minuit 23:00 a 01:00 active le soir et apres minuit',
     $resClosed = $this->getJson("/api/v1/schools/{$school->id}/schedule-status");
     $resClosed->assertStatus(200)->assertJson(['is_open' => false]);
 });
+
+/*
+|--------------------------------------------------------------------------
+| SÉRIE 6 : Fuseau horaire Africa/Casablanca, Décalage UTC+0 post-20 Septembre 2026
+|--------------------------------------------------------------------------
+*/
+test('22. Fuseau horaire par defaut de l application est Africa/Casablanca', function () {
+    expect(config('app.timezone'))->toBe('Africa/Casablanca');
+});
+
+test('23. Version de la base de fuseaux de PHP est superieure a 2026.1 et decalage de Africa/Casablanca est UTC+0', function () {
+    expect(timezone_version_get())->toBeGreaterThan('2026.1');
+
+    // Décret n° 2.26.530 : passage permanent à UTC+0 le 20 septembre 2026
+    $postSept2026 = new \DateTime('2026-11-08 12:00:00', new \DateTimeZone('Africa/Casablanca'));
+    expect($postSept2026->format('P'))->toBe('+00:00');
+    expect($postSept2026->getOffset())->toBe(0);
+
+    // Vérification Carbon
+    $carbonPostSept2026 = Carbon::parse('2026-11-08 12:00:00', 'Africa/Casablanca');
+    expect($carbonPostSept2026->format('P'))->toBe('+00:00');
+    expect($carbonPostSept2026->getOffset())->toBe(0);
+});
+
+test('24. ManageSchoolLogo refuse une plage horaire vide ou incomplete et ne sauvegarde rien', function () {
+    $school = School::factory()->create();
+    $admin = User::factory()->create([
+        'school_id' => $school->id,
+        'role' => 'admin_ecole',
+    ]);
+
+    $this->actingAs($admin);
+
+    \Livewire\Livewire::test(\App\Filament\Pages\ManageSchoolLogo::class)
+        ->set('windows', [
+            [
+                'id' => null,
+                'day_of_week' => 1,
+                'start_time' => '',
+                'end_time' => '',
+                'is_ramadan' => false,
+            ],
+        ])
+        ->call('save');
+
+    // Vérifier qu'aucune plage n'a été enregistrée
+    expect(PickupWindow::withoutGlobalScopes()->where('school_id', $school->id)->count())->toBe(0);
+});
+

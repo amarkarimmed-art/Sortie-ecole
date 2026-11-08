@@ -100,6 +100,22 @@
                     <button type="button" @click="testResult = null" class="text-xs opacity-75 hover:opacity-100">&times;</button>
                 </div>
 
+                {{-- Bannière de message géolocalisation (position admin) --}}
+                <div x-show="geoMessage !== null" x-cloak class="p-3 rounded-lg text-xs font-medium flex items-center justify-between gap-2"
+                     :class="{
+                         'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200': geoMessageType === 'error',
+                         'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200': geoMessageType === 'warning',
+                         'bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200': geoMessageType === 'info'
+                     }">
+                    <span class="flex items-center gap-2">
+                        <span x-show="geoMessageType === 'error'"><x-heroicon-o-exclamation-circle class="w-4 h-4 shrink-0" /></span>
+                        <span x-show="geoMessageType === 'warning'"><x-heroicon-o-exclamation-triangle class="w-4 h-4 shrink-0" /></span>
+                        <span x-show="geoMessageType === 'info'"><x-heroicon-o-information-circle class="w-4 h-4 shrink-0" /></span>
+                        <span x-text="geoMessage"></span>
+                    </span>
+                    <button type="button" @click="geoMessage = null" class="text-xs opacity-75 hover:opacity-100 shrink-0">&times;</button>
+                </div>
+
                 {{-- Boutons rapides de rayon --}}
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Rayons rapides :</span>
@@ -249,21 +265,26 @@
                 </button>
             </div>
         </x-filament-panels::form>
-    </div>
 
-    {{-- Script Leaflet et AlpineJS --}}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+        {{-- Script Leaflet et AlpineJS --}}
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-    <script>
+        <script>
         function gpsMapComponent(config) {
+            let map = null;
+            let marker = null;
+            let circle = null;
+            let adminMarker = null;
+            let adminAccuracyCircle = null;
+            let locateInterval = null;
+
             return {
                 lat: config.lat,
                 lng: config.lng,
                 radius: config.radius || 50,
-                map: null,
-                marker: null,
-                circle: null,
+                geoMessage: null,
+                geoMessageType: null, // 'error', 'warning', 'info'
                 testResult: null,
                 inPerimeter: false,
 
@@ -272,54 +293,54 @@
                     const defaultLng = this.lng ? parseFloat(this.lng) : -7.5898434;
 
                     this.$nextTick(() => {
-                        if (this.map) return;
+                        if (map) return;
 
-                        this.map = L.map('school-gate-map').setView([defaultLat, defaultLng], this.lat ? 17 : 13);
+                        map = L.map('school-gate-map').setView([defaultLat, defaultLng], this.lat ? 17 : 13);
 
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             maxZoom: 19,
                             attribution: '© OpenStreetMap'
-                        }).addTo(this.map);
+                        }).addTo(map);
 
                         if (this.lat && this.lng) {
                             this.setMarkerAndCircle(defaultLat, defaultLng, parseInt(this.radius));
                         }
 
-                        this.map.on('click', (e) => {
+                        map.on('click', (e) => {
                             this.updatePosition(e.latlng.lat, e.latlng.lng);
                         });
 
                         // Surveiller les changements de rayon
                         this.$watch('radius', (newR) => {
-                            if (this.circle) {
-                                this.circle.setRadius(parseInt(newR));
+                            if (circle) {
+                                circle.setRadius(parseInt(newR));
                             }
                         });
                     });
                 },
 
                 setMarkerAndCircle(lat, lng, radius) {
-                    if (this.marker) {
-                        this.marker.setLatLng([lat, lng]);
+                    if (marker) {
+                        marker.setLatLng([lat, lng]);
                     } else {
-                        this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
-                        this.marker.on('dragend', (e) => {
+                        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                        marker.on('dragend', (e) => {
                             const pos = e.target.getLatLng();
                             this.updatePosition(pos.lat, pos.lng);
                         });
-                        this.marker.bindPopup("<b>Portail de l'école</b>").openPopup();
+                        marker.bindPopup("<b>Portail de l'école<\/b>").openPopup();
                     }
 
-                    if (this.circle) {
-                        this.circle.setLatLng([lat, lng]);
-                        this.circle.setRadius(radius);
+                    if (circle) {
+                        circle.setLatLng([lat, lng]);
+                        circle.setRadius(radius);
                     } else {
-                        this.circle = L.circle([lat, lng], {
+                        circle = L.circle([lat, lng], {
                             radius: radius,
                             color: '#10b981',
                             fillColor: '#10b981',
                             fillOpacity: 0.2
-                        }).addTo(this.map);
+                        }).addTo(map);
                     }
                 },
 
@@ -331,24 +352,114 @@
 
                 setRadius(r) {
                     this.radius = r;
-                    if (this.circle) {
-                        this.circle.setRadius(r);
+                    if (circle) {
+                        circle.setRadius(r);
                     }
                 },
 
                 locateAdmin() {
+                    // Réinitialiser les messages
+                    this.geoMessage = null;
+                    this.geoMessageType = null;
+
                     if (!navigator.geolocation) {
-                        alert("La géolocalisation n'est pas supportée par votre navigateur.");
+                        this.geoMessage = "La géolocalisation n'est pas supportée par votre navigateur.";
+                        this.geoMessageType = 'error';
                         return;
                     }
+
+                    // Attendre que la carte soit chargée (max 25 tentatives de 200 ms)
+                    if (!map) {
+                        if (locateInterval !== null) {
+                            return; // Un intervalle est déjà en cours
+                        }
+                        this.geoMessage = "La carte est en cours de chargement, veuillez patienter…";
+                        this.geoMessageType = 'info';
+                        let attempts = 0;
+                        const maxAttempts = 25;
+                        locateInterval = setInterval(() => {
+                            attempts++;
+                            if (map) {
+                                clearInterval(locateInterval);
+                                locateInterval = null;
+                                this.geoMessage = null;
+                                this.locateAdmin();
+                            } else if (attempts >= maxAttempts) {
+                                clearInterval(locateInterval);
+                                locateInterval = null;
+                                this.geoMessage = "Délai d'attente dépassé : la carte n'a pas pu se charger.";
+                                this.geoMessageType = 'error';
+                            }
+                        }, 200);
+                        return;
+                    }
+
+                    if (locateInterval !== null) {
+                        clearInterval(locateInterval);
+                        locateInterval = null;
+                    }
+
                     navigator.geolocation.getCurrentPosition((pos) => {
-                        const lat = pos.coords['lat' + 'itude'];
-                        const lng = pos.coords['long' + 'itude'];
-                        this.updatePosition(lat, lng);
-                        this.map.setView([lat, lng], 17);
+                        const adminLat = pos.coords['lat' + 'itude'];
+                        const adminLng = pos.coords['long' + 'itude'];
+                        const accuracy = pos.coords.accuracy;
+
+                        // Avertir si la précision est faible
+                        if (accuracy > 50) {
+                            this.geoMessage = `Position approximative (précision : ~${Math.round(accuracy)} m). Sur un ordinateur, la géolocalisation peut être moins précise que sur un téléphone.`;
+                            this.geoMessageType = 'warning';
+                        } else {
+                            this.geoMessage = `Position détectée (précision : ~${Math.round(accuracy)} m). Le marqueur bleu indique votre position, le marqueur rouge indique le portail.`;
+                            this.geoMessageType = 'info';
+                        }
+
+                        // Afficher la position de l'admin avec un marqueur distinct (bleu)
+                        this.showAdminMarker(adminLat, adminLng, accuracy);
+
+                        // Recentrer la carte sans toucher à la position du portail
+                        map.setView([adminLat, adminLng], 17);
+
                     }, (err) => {
-                        alert("Impossible de récupérer votre position : " + err.message);
-                    }, { enableHighAccuracy: true });
+                        if (err.code === 1) { // PERMISSION_DENIED
+                            this.geoMessage = "Vous avez refusé l'accès à la géolocalisation. Pour l'autoriser, cliquez sur l'icône de cadenas (ou de localisation) dans la barre d'adresse de votre navigateur, autorisez la localisation, puis rechargez la page.";
+                        } else if (err.code === 2) { // POSITION_UNAVAILABLE
+                            this.geoMessage = "Votre position n'a pas pu être déterminée. Vérifiez que la localisation est activée sur votre appareil.";
+                        } else { // TIMEOUT
+                            this.geoMessage = "La demande de géolocalisation a expiré. Réessayez.";
+                        }
+                        this.geoMessageType = 'error';
+                    }, { enableHighAccuracy: true, timeout: 10000 });
+                },
+
+                showAdminMarker(lat, lng, accuracy) {
+                    const adminIcon = L.divIcon({
+                        className: 'admin-location-icon',
+                        html: '<div style="width:16px;height:16px;background:#3b82f6;border:3px solid white;border-radius:50%;box-shadow:0 0 6px rgba(59,130,246,0.6);"><\/div>',
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+
+                    if (adminMarker) {
+                        adminMarker.setLatLng([lat, lng]);
+                    } else {
+                        adminMarker = L.marker([lat, lng], { icon: adminIcon, interactive: false, zIndexOffset: -100 }).addTo(map);
+                        adminMarker.bindPopup("<b>Votre position<\/b>");
+                    }
+
+                    // Cercle de précision
+                    if (adminAccuracyCircle) {
+                        adminAccuracyCircle.setLatLng([lat, lng]);
+                        adminAccuracyCircle.setRadius(accuracy);
+                    } else {
+                        adminAccuracyCircle = L.circle([lat, lng], {
+                            radius: accuracy,
+                            color: '#3b82f6',
+                            fillColor: '#3b82f6',
+                            fillOpacity: 0.08,
+                            weight: 1,
+                            interactive: false
+                        }).addTo(map);
+                    }
                 },
 
                 testDistance() {
@@ -394,4 +505,5 @@
             };
         }
     </script>
+    </div>
 </x-filament-panels::page>

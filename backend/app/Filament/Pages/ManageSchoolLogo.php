@@ -265,8 +265,8 @@ class ManageSchoolLogo extends Page implements HasForms
         $this->windows[] = [
             'id'          => null,
             'day_of_week' => $day,
-            'start_time'  => '16:00',
-            'end_time'    => '17:00',
+            'start_time'  => '',
+            'end_time'    => '',
             'is_ramadan'  => $this->is_ramadan_mode,
         ];
     }
