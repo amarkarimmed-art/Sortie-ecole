@@ -30,10 +30,10 @@ RUN apk add --no-cache \
         opcache \
         zip
 
-# Redis extension
+# Redis and Timezonedb extensions
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && pecl install redis timezonedb \
+    && docker-php-ext-enable redis timezonedb \
     && apk del .build-deps
 
 # Composer
