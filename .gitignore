@@ -68,3 +68,6 @@ backend/storage/framework/views/*.php
 backend/storage/logs/*.log
 
 backend/storage/
+app_parent/linux/
+app_parent/macos/
+app_parent/windows/
